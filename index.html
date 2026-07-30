@@ -131,17 +131,34 @@ input::placeholder,textarea::placeholder{color:var(--ink-dark-dim)}
 /* pnl calculator */
 .calc{background:linear-gradient(160deg,var(--navy-3),var(--navy-2));border-radius:var(--r-lg);padding:18px;color:var(--ink)}
 .calc .net-label{font-size:.72rem;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em}
-.calc .net{font-size:2rem;font-weight:700;letter-spacing:-.02em;margin:4px 0 14px}
-.layer{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.layer .idx{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--ink-dim)}
-.layer .sign{width:44px;height:44px;border-radius:var(--r-sm);font-weight:800;font-size:1.05rem;border:1px solid rgba(255,255,255,.18)}
-.layer .sign.pos{background:rgba(58,217,142,.16);color:var(--green)}
-.layer .sign.neg{background:rgba(255,132,132,.16);color:var(--red)}
-.layer .amt{flex:1;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);border-radius:var(--r-sm);padding:11px 12px;color:var(--ink);outline:0;font-size:1rem;font-weight:600;min-width:0}
-.layer .del{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-.layer .del svg{width:16px;height:16px;stroke:var(--ink-faint)}
-.add-layer{width:100%;margin-top:4px;padding:12px;border-radius:var(--r-sm);border:1px dashed rgba(255,255,255,.3);color:var(--ink-dim);font-weight:600;font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:6px}
-.add-layer svg{width:15px;height:15px;stroke:var(--ink-dim)}
+.calc .net{font-size:2rem;font-weight:700;letter-spacing:-.02em;margin:4px 0 2px}
+.calc .expr{min-height:22px;font-size:.9rem;color:var(--ink-dim);font-weight:600;word-break:break-all;text-align:left;margin-bottom:10px}
+.keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.keypad button{height:54px;border-radius:14px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);font-size:1.2rem;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:center;transition:filter .1s}
+.keypad button:active{filter:brightness(1.4)}
+.keypad button.op{background:rgba(143,193,240,.16);color:var(--blue);font-size:1.4rem}
+.keypad button.eq{background:linear-gradient(150deg,#9cc6ef,#5f92c9);color:#0e2a4d;font-size:1.4rem}
+.keypad button.clr{color:var(--red);font-size:1rem}
+.keypad button svg{width:20px;height:20px;stroke:var(--ink)}
+
+/* calendar */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr) 1.18fr;gap:4px}
+.cal-h{font-size:.58rem;font-weight:800;color:var(--ink-dark-dim);text-align:center;padding:3px 0;letter-spacing:.05em}
+.cal-cell{background:var(--glass);border:1px solid var(--glass-line);border-radius:10px;min-height:54px;padding:5px 2px 4px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.cal-cell.blank{background:transparent;border-color:transparent}
+.cal-cell .d{font-size:.6rem;font-weight:700;color:var(--ink-dark-dim);line-height:1}
+.cal-cell.today .d{background:var(--navy);color:var(--ink);border-radius:99px;padding:2px 6px;margin:-2px 0 0}
+.cal-cell.pos{background:rgba(25,184,115,.2);border-color:rgba(25,184,115,.38)}
+.cal-cell.neg{background:rgba(240,96,96,.17);border-color:rgba(240,96,96,.32)}
+.cal-cell.flat{background:rgba(19,44,77,.1)}
+.cal-cell .p{font-size:.6rem;font-weight:800;letter-spacing:-.02em;margin-top:3px;line-height:1}
+.cal-cell.pos .p{color:#0c7d4e}.cal-cell.neg .p{color:#b23434}.cal-cell.flat .p{color:var(--ink-dark-dim)}
+.cal-cell .c{font-size:.52rem;font-weight:600;color:var(--ink-dark-dim);line-height:1.4}
+.cal-week{background:linear-gradient(160deg,var(--navy-3),var(--navy-2));border:0;border-radius:10px;min-height:54px;padding:5px 2px 4px;display:flex;flex-direction:column;align-items:center;gap:1px;color:var(--ink)}
+.cal-week .d{font-size:.55rem;font-weight:700;color:var(--ink-faint);line-height:1}
+.cal-week .p{font-size:.6rem;font-weight:800;margin-top:3px;line-height:1}
+.cal-week .p.pos{color:var(--green)}.cal-week .p.neg{color:var(--red)}
+.cal-week .c{font-size:.52rem;color:var(--ink-faint);line-height:1.4}
 
 .btn-primary{width:100%;padding:16px;border-radius:var(--r-md);background:linear-gradient(150deg,var(--navy-3),var(--navy-2));color:var(--ink);font-weight:700;font-size:1rem;box-shadow:0 14px 30px -12px rgba(9,32,61,.6);display:flex;align-items:center;justify-content:center;gap:8px;margin-top:22px}
 .btn-primary svg{width:17px;height:17px;stroke:var(--ink)}
@@ -226,11 +243,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:40;display:flex;justify-conte
   <header class="hdr">
     <svg class="logo" viewBox="0 0 32 26" fill="#132c4d"><rect x="6" y="0" width="20" height="4" rx="1"/><rect x="2" y="7" width="24" height="5" rx="1"/><rect x="0" y="15" width="28" height="6" rx="1"/><rect x="20" y="9" width="10" height="2" rx="1" opacity=".7"/></svg>
     <span class="brand">TradeTrackr</span>
-    <span class="spacer"></span>
-    <button class="icon-btn" id="btn-export-top" aria-label="Export backup" title="Export backup">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    </button>
   </header>
+
+  <!-- ============ CALENDAR ============ -->
+  <section class="view" id="view-calendar"></section>
 
   <!-- ============ STATS ============ -->
   <section class="view" id="view-stats"></section>
@@ -247,22 +263,22 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:40;display:flex;justify-conte
 
 <nav>
   <div class="nav-inner">
-    <button class="nav-item" data-nav="stats">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg>
-      <span>Stats</span>
+    <button class="nav-item" data-nav="calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Calendar</span>
     </button>
-    <button class="nav-item" data-nav="history">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
-      <span>History</span>
+    <button class="nav-item" data-nav="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+      <span>Stats</span>
     </button>
     <div class="nav-add">
       <button data-nav="add" aria-label="Add trade">
         <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
     </div>
-    <button class="nav-item" id="nav-backup">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <span>Backup</span>
+    <button class="nav-item" data-nav="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+      <span>History</span>
     </button>
     <button class="nav-item" data-nav="settings">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
@@ -303,7 +319,7 @@ function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e)
 /* ---------- ui state ---------- */
 const now = new Date();
 let UI = {
-  tab:'stats',
+  tab:'calendar',
   statsAccountId:null,
   statsY: now.getFullYear(), statsM: now.getMonth(),
   historyFilter:'all',
@@ -368,6 +384,131 @@ const I = {
   book:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>',
   star:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linejoin="round"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>'
 };
+
+/* ============================================================
+   RENDER: CALENDAR
+   ============================================================ */
+function kfmt(n){
+  const a = Math.abs(n);
+  let s;
+  if(a >= 100000) s = (a/1000).toFixed(0)+'k';
+  else if(a >= 1000) s = (a/1000).toFixed(1).replace(/\.0$/,'')+'k';
+  else s = a.toFixed(a>=100?0:a%1?1:0).replace(/\.0$/,'');
+  return (n<0?'-':n>0?'+':'')+'$'+s;
+}
+function renderCalendar(){
+  const el = document.getElementById('view-calendar');
+  if(!S.accounts.length){ el.innerHTML = emptyOnboard(); return; }
+  if(!UI.statsAccountId || !acct(UI.statsAccountId)) UI.statsAccountId = defAcct().id;
+  const aid = UI.statsAccountId;
+  const y = UI.statsY, m = UI.statsM;
+  const isCurrent = y===now.getFullYear() && m===now.getMonth();
+  const tISO = todayISO();
+
+  /* daily aggregates */
+  const days = {};
+  for(const t of S.trades){
+    if(t.accountId!==aid || !inMonth(t.date,y,m)) continue;
+    const d = +t.date.split('-')[2];
+    (days[d] = days[d] || {pnl:0,n:0});
+    days[d].pnl += tradePnl(t); days[d].n++;
+  }
+  const monthPnl = Object.values(days).reduce((s,d)=>s+d.pnl,0);
+  const monthN = Object.values(days).reduce((s,d)=>s+d.n,0);
+
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const firstDow = (new Date(y, m, 1).getDay() + 6) % 7; /* Monday = 0 */
+
+  let cells = ['Mo','Tu','We','Th','Fr','Sa','Su'].map(h=>`<div class="cal-h">${h}</div>`).join('') + `<div class="cal-h">WEEK</div>`;
+  let week = {pnl:0,n:0}, weekNo = 1, col = 0;
+  for(let i=0;i<firstDow;i++){ cells += `<div class="cal-cell blank"></div>`; col++; }
+  for(let d=1; d<=daysInMonth; d++){
+    const dd = days[d];
+    const iso = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isToday = iso===tISO;
+    if(dd){
+      week.pnl += dd.pnl; week.n += dd.n;
+      const kind = dd.pnl>0?'pos':dd.pnl<0?'neg':'flat';
+      cells += `<button class="cal-cell ${kind} ${isToday?'today':''}" data-day="${iso}">
+        <span class="d">${d}</span><span class="p">${kfmt(dd.pnl)}</span><span class="c">${dd.n} trade${dd.n===1?'':'s'}</span>
+      </button>`;
+    } else {
+      cells += `<div class="cal-cell ${isToday?'today':''}"><span class="d">${d}</span></div>`;
+    }
+    col++;
+    if(col===7 || d===daysInMonth){
+      while(col<7){ cells += `<div class="cal-cell blank"></div>`; col++; }
+      const wk = week.n
+        ? `<div class="cal-week"><span class="d">W${weekNo}</span><span class="p ${week.pnl>0?'pos':week.pnl<0?'neg':''}">${kfmt(week.pnl)}</span><span class="c">${week.n} trade${week.n===1?'':'s'}</span></div>`
+        : `<div class="cal-week"><span class="d">W${weekNo}</span><span class="p" style="color:var(--ink-faint)">—</span></div>`;
+      cells += wk;
+      week = {pnl:0,n:0}; weekNo++; col = 0;
+    }
+  }
+
+  el.innerHTML = `
+  <div class="label-row" style="display:flex;align-items:center;justify-content:space-between;margin:2px 2px 12px">
+    <h2 style="font-size:1.3rem">Calendar</h2>
+    <div class="acct-select" style="--_:0">
+      <select id="cal-acct" aria-label="Select account" style="appearance:none;-webkit-appearance:none;background:var(--glass);border:1px solid var(--glass-line);color:var(--ink-dark);border-radius:999px;padding:7px 30px 7px 14px;font-size:.8rem;font-weight:700;max-width:170px">
+        ${S.accounts.map(a=>`<option value="${a.id}" ${a.id===aid?'selected':''}>${esc(a.name)}</option>`).join('')}
+      </select>
+      <svg viewBox="0 0 24 24" fill="none" stroke="#132c4d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;pointer-events:none"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </div>
+
+  <div class="month-row">
+    <button class="m-btn" id="cal-prev" aria-label="Previous month">${I.chevL}</button>
+    <span class="m-label">${MONTHS[m]} ${y}</span>
+    <button class="m-btn" id="cal-next" aria-label="Next month" ${isCurrent?'disabled':''}>${I.chevR}</button>
+  </div>
+
+  <div class="card-navy" style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+    <div><div style="font-size:.68rem;color:var(--ink-dim)">Monthly PnL</div>
+    <div style="font-size:1.25rem;font-weight:700;color:${monthPnl>0?'var(--green)':monthPnl<0?'var(--red)':'var(--ink)'}">${money(monthPnl,true)}</div></div>
+    <div style="text-align:right"><div style="font-size:.68rem;color:var(--ink-dim)">Trades</div>
+    <div style="font-size:1.25rem;font-weight:700">${monthN}</div></div>
+  </div>
+
+  <div class="cal-grid">${cells}</div>
+  <p style="font-size:.72rem;color:var(--ink-dark-dim);margin:12px 4px 0;text-align:center">Tap a coloured day to see its trades.</p>`;
+
+  el.querySelector('#cal-acct').onchange = e => { UI.statsAccountId = e.target.value; renderCalendar(); };
+  el.querySelector('#cal-prev').onclick = () => { UI.statsM--; if(UI.statsM<0){UI.statsM=11;UI.statsY--;} renderCalendar(); };
+  const nx = el.querySelector('#cal-next'); if(nx) nx.onclick = () => { UI.statsM++; if(UI.statsM>11){UI.statsM=0;UI.statsY++;} renderCalendar(); };
+  el.querySelectorAll('[data-day]').forEach(b=> b.onclick = ()=> openDaySheet(b.dataset.day));
+}
+
+function openDaySheet(iso){
+  const aid = UI.statsAccountId;
+  const trades = S.trades.filter(t=>t.accountId===aid && t.date===iso).sort((a,b)=>b.createdAt-a.createdAt);
+  const dayPnl = trades.reduce((s,t)=>s+tradePnl(t),0);
+  openSheet(`
+    <h3>${relDay(iso)}</h3>
+    <p class="desc">${trades.length} trade${trades.length===1?'':'s'} · Day PnL <b style="color:${dayPnl>0?'var(--green-deep)':dayPnl<0?'var(--red-deep)':'inherit'}">${money(dayPnl,true)}</b></p>
+    <div style="max-height:46vh;overflow-y:auto">
+    ${trades.map(t=>{
+      const p = tradePnl(t); const kind = classify(t);
+      const cls = kind==='win'?'pos':kind==='loss'?'neg':'be';
+      return `<button class="trade-row" data-id="${t.id}" style="margin-bottom:8px">
+        <span class="ava">${esc(t.asset.slice(0,3))}</span>
+        <span class="mid">
+          <span class="sym">${esc(t.asset)}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
+          <span class="meta">${t.notes?esc(t.notes):(t.layers.length>1?t.layers.length+' entries':'')}</span>
+        </span>
+        <span class="pnl ${cls}">${kind==='be'?'BE':money(p,true)}${kind==='be'?'<small>'+money(p,true)+'</small>':''}</span>
+        ${I.chevR}
+      </button>`;
+    }).join('')}
+    </div>
+  `);
+  sheetEl.querySelectorAll('.trade-row').forEach(r=> r.onclick = ()=>{
+    const t = S.trades.find(x=>x.id===r.dataset.id); if(!t) return;
+    closeSheet();
+    UI.form = formFromTrade(t);
+    nav('add');
+  });
+}
 
 /* ============================================================
    RENDER: STATS
@@ -545,15 +686,26 @@ function monthlyBarsSVG(aid, y, m){
 function blankForm(){
   const d = defAcct();
   return { editingId:null, accountId: d ? d.id : null, asset: S.settings.defaultAsset || S.assets[0] || null,
-           direction:'buy', layers:[{sign:1, val:''}], notes:'', date: todayISO() };
+           direction:'buy', entries:[{sign:1, str:''}], notes:'', date: todayISO() };
 }
+function formFromTrade(t){
+  return { editingId:t.id, accountId:t.accountId, asset:t.asset, direction:t.direction,
+    entries: t.layers.map(v=>({sign: v<0?-1:1, str: String(Math.abs(v))})), notes:t.notes, date:t.date };
+}
+const calcNet = f => f.entries.reduce((s,e)=> s + (e.sign * (parseFloat(e.str)||0)), 0);
+const calcExpr = f => f.entries.map((e,i)=>{
+  const num = e.str==='' ? (i===f.entries.length-1 ? '…' : '0') : e.str;
+  if(i===0) return (e.sign<0?'−':'') + num;
+  return (e.sign<0?' − ':' + ') + num;
+}).join('');
+
 function renderAdd(){
   const el = document.getElementById('view-add');
   if(!S.accounts.length){ el.innerHTML = emptyOnboard(); return; }
   if(!UI.form) UI.form = blankForm();
   const f = UI.form;
   if(!acct(f.accountId)) f.accountId = defAcct().id;
-  const net = f.layers.reduce((s,l)=> s + (l.sign * (parseFloat(l.val)||0)), 0);
+  const net = calcNet(f);
   const editing = !!f.editingId;
 
   el.innerHTML = `
@@ -562,7 +714,7 @@ function renderAdd(){
 
   <div class="section-label">Account</div>
   <div class="chips" id="f-accounts">
-    ${S.accounts.map(a=>`<button class="select-chip ${a.id===f.accountId?'on':''}" data-id="${a.id}">${esc(a.name)}${a.id===S.settings.defaultAccountId?' ·':''}</button>`).join('')}
+    ${S.accounts.map(a=>`<button class="select-chip ${a.id===f.accountId?'on':''}" data-id="${a.id}">${esc(a.name)}</button>`).join('')}
   </div>
 
   <div class="section-label">Asset</div>
@@ -579,18 +731,15 @@ function renderAdd(){
 
   <div class="section-label">PnL calculator</div>
   <div class="calc">
-    <div class="net-label">Net PnL — all layers</div>
-    <div class="net" style="color:${net>0?'var(--green)':net<0?'var(--red)':'var(--ink)'}">${money(net,true)}</div>
-    <div id="f-layers">
-      ${f.layers.map((l,i)=>`
-      <div class="layer" data-i="${i}">
-        <span class="idx">${i+1}</span>
-        <button class="sign ${l.sign>0?'pos':'neg'}" data-act="sign" aria-label="Toggle profit or loss">${l.sign>0?'+':'−'}</button>
-        <input class="amt" type="text" inputmode="decimal" placeholder="0.00" value="${esc(l.val)}" aria-label="Layer ${i+1} amount">
-        <button class="del" data-act="del-layer" aria-label="Remove layer" ${f.layers.length===1?'style="visibility:hidden"':''}>${I.x}</button>
-      </div>`).join('')}
+    <div class="net-label">Net PnL</div>
+    <div class="net" id="k-net" style="color:${net>0?'var(--green)':net<0?'var(--red)':'var(--ink)'}">${money(net,true)}</div>
+    <div class="expr" id="k-expr">${calcExpr(f)}</div>
+    <div class="keypad" id="keypad">
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="bs" class="op" aria-label="Backspace"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg></button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="plus" class="op">+</button>
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="minus" class="op">−</button>
+      <button data-k="clr" class="clr">C</button><button data-k="0">0</button><button data-k=".">.</button><button data-k="eq" class="eq">=</button>
     </div>
-    <button class="add-layer" id="f-add-layer">${I.plus}Add layer</button>
   </div>
 
   <div class="section-label">Date</div>
@@ -609,24 +758,36 @@ function renderAdd(){
     if(e.target.closest('#f-new-asset')) openAssetSheet(sym => { f.asset=sym; renderAdd(); });
   };
   el.querySelectorAll('[data-dir]').forEach(b=> b.onclick = ()=>{ f.direction=b.dataset.dir; renderAdd(); });
-  const layersEl = el.querySelector('#f-layers');
-  layersEl.addEventListener('click', e=>{
-    const row = e.target.closest('.layer'); if(!row) return;
-    const i = +row.dataset.i;
-    if(e.target.closest('[data-act="sign"]')){ f.layers[i].sign *= -1; renderAdd(); }
-    if(e.target.closest('[data-act="del-layer"]')){ f.layers.splice(i,1); renderAdd(); }
-  });
-  layersEl.addEventListener('input', e=>{
-    const row = e.target.closest('.layer'); if(!row || !e.target.classList.contains('amt')) return;
-    const i = +row.dataset.i;
-    e.target.value = e.target.value.replace(/[^0-9.]/g,'');
-    f.layers[i].val = e.target.value;
-    const n = f.layers.reduce((s,l)=> s + (l.sign*(parseFloat(l.val)||0)), 0);
-    const netEl = el.querySelector('.net');
+
+  el.querySelector('#keypad').onclick = e => {
+    const b = e.target.closest('[data-k]'); if(!b) return;
+    const k = b.dataset.k;
+    const cur = f.entries[f.entries.length-1];
+    if(/^[0-9]$/.test(k)){
+      if(cur.str.replace('.','').length < 10) cur.str += k;
+    } else if(k==='.'){
+      if(!cur.str.includes('.')) cur.str = (cur.str||'0') + '.';
+    } else if(k==='plus' || k==='minus'){
+      const sign = k==='plus' ? 1 : -1;
+      if(cur.str==='') cur.sign = sign;           /* no number yet: set pending sign */
+      else f.entries.push({sign, str:''});         /* start next entry */
+    } else if(k==='bs'){
+      if(cur.str!=='') cur.str = cur.str.slice(0,-1);
+      else if(f.entries.length>1) f.entries.pop();
+      else cur.sign = 1;
+    } else if(k==='clr'){
+      f.entries = [{sign:1, str:''}];
+    } else if(k==='eq'){
+      const n = calcNet(f);
+      f.entries = [{sign: n<0?-1:1, str: n===0?'':String(Math.abs(Math.round(n*100)/100))}];
+    }
+    const n = calcNet(f);
+    const netEl = el.querySelector('#k-net');
     netEl.textContent = money(n,true);
     netEl.style.color = n>0?'var(--green)':n<0?'var(--red)':'var(--ink)';
-  });
-  el.querySelector('#f-add-layer').onclick = ()=>{ f.layers.push({sign:1,val:''}); renderAdd(); setTimeout(()=>{ const inputs=el.querySelectorAll('.amt'); inputs[inputs.length-1].focus(); },0); };
+    el.querySelector('#k-expr').textContent = calcExpr(f);
+  };
+
   el.querySelector('#f-date').onchange = e=> f.date = e.target.value || todayISO();
   el.querySelector('#f-notes').oninput = e=> f.notes = e.target.value;
   el.querySelector('#f-save').onclick = saveTrade;
@@ -639,8 +800,8 @@ function saveTrade(){
   const f = UI.form;
   if(!f.accountId) return toast('Pick an account');
   if(!f.asset) return toast('Pick an asset');
-  const layers = f.layers.map(l=> l.sign*(parseFloat(l.val)||0)).filter((v,i)=> f.layers[i].val !== '');
-  if(!layers.length) return toast('Enter at least one PnL layer');
+  const layers = f.entries.filter(e=>e.str!=='' && !isNaN(parseFloat(e.str))).map(e=> e.sign*parseFloat(e.str));
+  if(!layers.length) return toast('Enter the PnL on the calculator');
   const trade = {
     id: f.editingId || uid(),
     accountId: f.accountId, asset: f.asset, direction: f.direction,
@@ -649,7 +810,7 @@ function saveTrade(){
   };
   if(f.editingId){ const i = S.trades.findIndex(t=>t.id===f.editingId); S.trades[i] = trade; toast('Trade updated'); }
   else { S.trades.push(trade); toast('Trade saved · ' + money(tradePnl(trade),true)); }
-  save(); UI.form = null; nav('history');
+  save(); UI.form = null; nav('calendar');
 }
 
 /* ============================================================
@@ -701,8 +862,7 @@ function renderHistory(){
   el.querySelector('.filter-scroll').onclick = e=>{ const b=e.target.closest('[data-f]'); if(b){ UI.historyFilter=b.dataset.f; renderHistory(); } };
   el.querySelectorAll('.trade-row').forEach(r=> r.onclick = ()=>{
     const t = S.trades.find(x=>x.id===r.dataset.id); if(!t) return;
-    UI.form = { editingId:t.id, accountId:t.accountId, asset:t.asset, direction:t.direction,
-      layers: t.layers.map(v=>({sign: v<0?-1:1, val: String(Math.abs(v))})), notes:t.notes, date:t.date };
+    UI.form = formFromTrade(t);
     nav('add');
   });
 }
@@ -800,8 +960,8 @@ function renderSettings(){
   el.querySelector('#s-export').onclick = exportData;
   el.querySelector('#s-import').onclick = ()=> document.getElementById('import-file').click();
   el.querySelector('#s-reset').onclick = ()=> confirmSheet('Erase all data?','Every account, trade, and note will be permanently deleted from this device.',()=>{
-    localStorage.removeItem(LS_KEY); S = load(); UI = {tab:'stats',statsAccountId:null,statsY:now.getFullYear(),statsM:now.getMonth(),historyFilter:'all',form:null};
-    toast('All data erased'); nav('stats');
+    localStorage.removeItem(LS_KEY); S = load(); UI = {tab:'calendar',statsAccountId:null,statsY:now.getFullYear(),statsM:now.getMonth(),historyFilter:'all',form:null};
+    toast('All data erased'); nav('calendar');
   });
 }
 
@@ -810,8 +970,16 @@ function renderSettings(){
    ============================================================ */
 const backdrop = document.getElementById('sheet-backdrop');
 const sheetEl = document.getElementById('sheet');
-function openSheet(html){ sheetEl.innerHTML = '<div class="grab"></div>'+html; backdrop.classList.add('open'); }
-function closeSheet(){ backdrop.classList.remove('open'); }
+function openSheet(html){
+  sheetEl.innerHTML = '<div class="grab"></div>'+html;
+  backdrop.classList.add('open');
+  history.pushState({tab:UI.tab, sheet:1}, '');
+}
+function domCloseSheet(){ backdrop.classList.remove('open'); }
+function closeSheet(){
+  domCloseSheet();
+  if(history.state && history.state.sheet) history.back();
+}
 backdrop.addEventListener('click', e=>{ if(e.target===backdrop) closeSheet(); });
 
 function openAccountSheet(editId){
@@ -913,7 +1081,7 @@ document.getElementById('import-file').addEventListener('change', e=>{
       confirmSheet('Restore this backup?','This replaces everything currently on this device with the backup file.',()=>{
         S = { accounts:d.accounts||[], assets:d.assets||[...DEFAULT_ASSETS], trades:d.trades||[], txns:d.txns||[], settings:d.settings||{defaultAccountId:d.accounts?.[0]?.id||null, defaultAsset:'XAUUSD'} };
         save(); UI.statsAccountId=null; UI.historyFilter='all'; UI.form=null;
-        toast('Backup restored'); nav('stats');
+        toast('Backup restored'); nav('calendar');
       });
       // repurpose confirm button label
       const yes = document.getElementById('sh-yes'); if(yes) yes.textContent='Restore', yes.style.background='var(--navy)';
@@ -922,22 +1090,24 @@ document.getElementById('import-file').addEventListener('change', e=>{
   };
   reader.readAsText(file);
 });
-document.getElementById('btn-export-top').onclick = exportData;
+
 
 /* ============================================================
-   NAV + BOOT
+   NAV + BACK BUTTON + BOOT
    ============================================================ */
-function nav(tab){
-  if(tab==='add' && UI.tab!=='add' && UI.form && UI.form.editingId===null){ /* keep draft */ }
+function nav(tab, fromPop){
+  const changed = UI.tab !== tab;
   UI.tab = tab;
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.getElementById('view-'+tab).classList.add('on');
   document.querySelectorAll('.nav-item').forEach(b=> b.classList.toggle('on', b.dataset.nav===tab));
+  if(!fromPop && changed) history.pushState({tab}, '', '#'+tab);
   render();
   window.scrollTo({top:0});
 }
 function render(){
-  if(UI.tab==='stats') renderStats();
+  if(UI.tab==='calendar') renderCalendar();
+  else if(UI.tab==='stats') renderStats();
   else if(UI.tab==='add') renderAdd();
   else if(UI.tab==='history') renderHistory();
   else if(UI.tab==='settings') renderSettings();
@@ -947,7 +1117,14 @@ document.querySelectorAll('[data-nav]').forEach(b=> b.addEventListener('click', 
   if(t==='add') UI.form = UI.form && !UI.form.editingId ? UI.form : blankForm();
   nav(t);
 }));
-document.getElementById('nav-backup').addEventListener('click', exportData);
+
+/* Android/browser back: close open sheet first, then step back through tabs.
+   Only backing out of the first screen exits the app. */
+window.addEventListener('popstate', e=>{
+  if(backdrop.classList.contains('open')){ domCloseSheet(); return; }
+  const tab = (e.state && e.state.tab) || 'calendar';
+  if(document.getElementById('view-'+tab)) nav(tab, true);
+});
 
 if('serviceWorker' in navigator){ window.addEventListener('load',()=> navigator.serviceWorker.register('sw.js').catch(()=>{})); }
 
@@ -958,7 +1135,8 @@ function toast(msg){
   clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
-nav('stats');
+history.replaceState({tab:'calendar'}, '', '#calendar');
+nav('calendar', true);
 </script>
 </body>
 </html>
