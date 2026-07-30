@@ -995,7 +995,9 @@ function openSheet(html){
 function domCloseSheet(){ backdrop.classList.remove('open'); }
 function closeSheet(){
   domCloseSheet();
-  if(history.state && history.state.sheet) history.back();
+  /* replace (not pop) the sheet's history entry so a nav() right after
+     closing isn't overridden by an async history.back() */
+  if(history.state && history.state.sheet) history.replaceState({tab:UI.tab}, '', '#'+UI.tab);
 }
 backdrop.addEventListener('click', e=>{ if(e.target===backdrop) closeSheet(); });
 
