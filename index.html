@@ -125,7 +125,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .seg button.sell.on{background:linear-gradient(150deg,#e4635f,#c14340);color:#fff;border-color:transparent}
 .field{background:var(--glass);border:1px solid var(--glass-line);border-radius:var(--r-md);padding:4px 14px;display:flex;align-items:center;gap:10px}
 .field input,.field textarea,.field select{flex:1;background:none;border:0;outline:0;padding:11px 0;font-size:.95rem;color:var(--ink-dark);min-width:0;color-scheme:dark}
-.field textarea{resize:vertical;min-height:84px;line-height:1.45}
+.field textarea{resize:none;min-height:84px;line-height:1.45;overflow-y:auto}
 .field svg{width:17px;height:17px;stroke:var(--ink-dark-dim)}
 input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 
@@ -177,6 +177,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .dir-badge.buy{background:rgba(58,217,142,.16);color:var(--green)}
 .dir-badge.sell{background:rgba(255,132,132,.16);color:var(--red)}
 .trade-row .meta{font-size:.72rem;color:var(--ink-faint);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trade-row .note{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.74rem;color:var(--ink-dim);margin-top:5px;line-height:1.45;white-space:normal;word-break:break-word}
 .trade-row .pnl{font-weight:700;font-size:.95rem;text-align:right}
 .trade-row .pnl.pos{color:var(--green)}.trade-row .pnl.neg{color:var(--red)}.trade-row .pnl.be{color:var(--ink-dim)}
 .trade-row .pnl small{display:block;font-size:.65rem;color:var(--ink-faint);font-weight:500;margin-top:2px}
@@ -438,7 +439,8 @@ function renderCalendar(){
     const isToday = iso===tISO;
     if(dd){
       week.pnl += dd.pnl; week.n += dd.n;
-      const kind = dd.pnl>0?'pos':dd.pnl<0?'neg':'flat';
+      const thr = Math.abs(S.settings.beThreshold||0);
+      const kind = dd.pnl>thr?'pos':dd.pnl<-thr?'neg':'flat';
       cells += `<button class="cal-cell ${kind} ${isToday?'today':''}" data-day="${iso}">
         <span class="d">${d}</span><span class="p">${kfmt(dd.pnl)}</span><span class="c">${dd.n} trade${dd.n===1?'':'s'}</span>
       </button>`;
@@ -449,7 +451,7 @@ function renderCalendar(){
     if(col===7 || d===daysInMonth){
       while(col<7){ cells += `<div class="cal-cell blank"></div>`; col++; }
       const wk = week.n
-        ? `<div class="cal-week"><span class="d">W${weekNo}</span><span class="p ${week.pnl>0?'pos':week.pnl<0?'neg':''}">${kfmt(week.pnl)}</span><span class="c">${week.n} trade${week.n===1?'':'s'}</span></div>`
+        ? `<div class="cal-week"><span class="d">W${weekNo}</span><span class="p ${week.pnl>Math.abs(S.settings.beThreshold||0)?'pos':week.pnl<-Math.abs(S.settings.beThreshold||0)?'neg':''}">${kfmt(week.pnl)}</span><span class="c">${week.n} trade${week.n===1?'':'s'}</span></div>`
         : `<div class="cal-week"><span class="d">W${weekNo}</span><span class="p" style="color:var(--ink-faint)">—</span></div>`;
       cells += wk;
       week = {pnl:0,n:0}; weekNo++; col = 0;
@@ -504,7 +506,8 @@ function openDaySheet(iso){
         <span class="ava">${esc(t.asset.slice(0,3))}</span>
         <span class="mid">
           <span class="sym">${esc(t.asset)}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
-          <span class="meta">${t.notes?esc(t.notes):(t.layers.length>1?t.layers.length+' entries':'')}</span>
+          ${t.layers.length>1?`<span class="meta">${t.layers.length} entries</span>`:''}
+          ${t.notes?`<span class="note">${esc(t.notes)}</span>`:''}
         </span>
         <span class="pnl ${cls}">${kind==='be'?'BE':money(p,true)}${kind==='be'?'<small>'+money(p,true)+'</small>':''}</span>
         ${I.chevR}
@@ -799,7 +802,10 @@ function renderAdd(){
   };
 
   el.querySelector('#f-date').onchange = e=> f.date = e.target.value || todayISO();
-  el.querySelector('#f-notes').oninput = e=> f.notes = e.target.value;
+  const ta = el.querySelector('#f-notes');
+  const growTa = ()=>{ ta.style.height='auto'; ta.style.height = Math.max(84, Math.min(ta.scrollHeight, 340)) + 'px'; };
+  ta.oninput = e=>{ f.notes = e.target.value; growTa(); };
+  growTa();
   el.querySelector('#f-save').onclick = saveTrade;
   const delBtn = el.querySelector('#f-delete');
   if(delBtn) delBtn.onclick = ()=> confirmSheet('Delete this trade?','This removes it from your journal and stats. This can\'t be undone.',()=>{
@@ -853,7 +859,8 @@ function renderHistory(){
         <span class="ava">${esc(t.asset.slice(0,3))}</span>
         <span class="mid">
           <span class="sym">${esc(t.asset)}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
-          <span class="meta">${esc(a?a.name:'Deleted account')}${t.layers.length>1?' · '+t.layers.length+' layers':''}${t.notes?' · '+esc(t.notes):''}</span>
+          <span class="meta">${esc(a?a.name:'Deleted account')}${t.layers.length>1?' · '+t.layers.length+' layers':''}</span>
+          ${t.notes?`<span class="note">${esc(t.notes)}</span>`:''}
         </span>
         <span class="pnl ${cls}">${kind==='be'?'BE':money(p,true)}${kind==='be'?'<small>'+money(p,true)+'</small>':''}</span>
         ${I.chevR}
