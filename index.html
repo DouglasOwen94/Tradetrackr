@@ -330,14 +330,16 @@ function load(){
       if(d && Array.isArray(d.accounts)){
         d.settings = d.settings||{};
         if(d.settings.beThreshold==null) d.settings.beThreshold = 0;
+        if(d.settings.lastBackupAt===undefined) d.settings.lastBackupAt = null;
         if(!Array.isArray(d.tags)) d.tags = [...DEFAULT_TAGS];
         d.trades.forEach(t=>{ if(!Array.isArray(t.tags)) t.tags = []; });
         d.accounts.forEach(a=>{ if(a.monthlyGoal==null) a.monthlyGoal = 0; });
+        d.v = 2; /* schema version for safe future migrations */
         return d;
       }
     }
   }catch(e){}
-  return { accounts:[], assets:[...DEFAULT_ASSETS], tags:[...DEFAULT_TAGS], trades:[], txns:[], settings:{ defaultAccountId:null, defaultAsset:'XAUUSD', beThreshold:0 } };
+  return { v:2, accounts:[], assets:[...DEFAULT_ASSETS], tags:[...DEFAULT_TAGS], trades:[], txns:[], settings:{ defaultAccountId:null, defaultAsset:'XAUUSD', beThreshold:0, lastBackupAt:null } };
 }
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ toast('Could not save — storage full'); } }
 
@@ -416,8 +418,8 @@ const I = {
 function kfmt(n){
   const a = Math.abs(n);
   let s;
-  if(a >= 100000) s = (a/1000).toFixed(0)+'k';
-  else if(a >= 1000) s = (a/1000).toFixed(1).replace(/\.0$/,'')+'k';
+  if(a >= 99950) s = (a/1000).toFixed(0)+'k';
+  else if(a >= 999.5) s = (a/1000).toFixed(1).replace(/\.0$/,'')+'k';
   else s = a.toFixed(a>=100?0:a%1?1:0).replace(/\.0$/,'');
   return (n<0?'-':n>0?'+':'')+'$'+s;
 }
@@ -475,12 +477,12 @@ function renderCalendar(){
   el.innerHTML = `
   <div class="label-row" style="display:flex;align-items:center;justify-content:space-between;margin:2px 2px 12px">
     <h2 style="font-size:1.3rem">Calendar</h2>
-    <div class="acct-select" style="--_:0">
+    ${S.accounts.length>1?`<div class="acct-select" style="--_:0">
       <select id="cal-acct" aria-label="Select account" style="appearance:none;-webkit-appearance:none;background:var(--glass);border:1px solid var(--glass-line);color:var(--ink-dark);border-radius:8px;padding:7px 30px 7px 14px;font-size:.8rem;font-weight:700;max-width:170px">
         ${S.accounts.map(a=>`<option value="${a.id}" ${a.id===aid?'selected':''}>${esc(a.name)}</option>`).join('')}
       </select>
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="stroke:#ece5d1;position:absolute;right:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;pointer-events:none"><polyline points="6 9 12 15 18 9"/></svg>
-    </div>
+    </div>`:`<span style="font-size:.8rem;font-weight:700;color:var(--ink-dim)">${esc(acct(aid).name)}</span>`}
   </div>
 
   <div class="month-row">
@@ -499,7 +501,8 @@ function renderCalendar(){
   <div class="cal-grid">${cells}</div>
   ${monthN?`<p style="font-size:.72rem;color:var(--ink-dark-dim);margin:12px 4px 0;text-align:center">Tap a traded day to review it.</p>`:''}`;
 
-  el.querySelector('#cal-acct').onchange = e => { UI.statsAccountId = e.target.value; renderCalendar(); };
+  const calSel = el.querySelector('#cal-acct');
+  if(calSel) calSel.onchange = e => { UI.statsAccountId = e.target.value; renderCalendar(); };
   el.querySelector('#cal-prev').onclick = () => { UI.statsM--; if(UI.statsM<0){UI.statsM=11;UI.statsY--;} renderCalendar(); };
   const nx = el.querySelector('#cal-next'); if(nx) nx.onclick = () => { UI.statsM++; if(UI.statsM>11){UI.statsM=0;UI.statsY++;} renderCalendar(); };
   el.querySelectorAll('[data-day]').forEach(b=> b.onclick = ()=> openDaySheet(b.dataset.day));
@@ -593,12 +596,12 @@ function renderStats(){
   <div class="hero">
     <div class="label-row">
       <span class="label">Account balance</span>
-      <div class="acct-select">
+      ${S.accounts.length>1?`<div class="acct-select">
         <select id="stats-acct" aria-label="Select account">
           ${S.accounts.map(a=>`<option value="${a.id}" ${a.id===aid?'selected':''}>${esc(a.name)}</option>`).join('')}
         </select>
         ${I.chevD}
-      </div>
+      </div>`:`<span style="font-size:.8rem;font-weight:700;color:#4a3a12">${esc(acct(aid).name)}</span>`}
     </div>
     <div class="amount">${bp.main}<span class="cents">${bp.cents}</span></div>
     <div class="chip-row">
@@ -693,7 +696,8 @@ function renderStats(){
     <div class="chart-wrap">${monthlyBarsSVG(aid, y, m)}</div>
   </div>`;
 
-  el.querySelector('#stats-acct').onchange = e => { UI.statsAccountId = e.target.value; renderStats(); };
+  const acctSel = el.querySelector('#stats-acct');
+  if(acctSel) acctSel.onchange = e => { UI.statsAccountId = e.target.value; renderStats(); };
   el.querySelector('#m-prev').onclick = () => { UI.statsM--; if(UI.statsM<0){UI.statsM=11;UI.statsY--;} renderStats(); };
   const nx = el.querySelector('#m-next'); if(nx) nx.onclick = () => { UI.statsM++; if(UI.statsM>11){UI.statsM=0;UI.statsY++;} renderStats(); };
   el.querySelector('[data-act="go-add"]').onclick = () => nav('add');
@@ -904,7 +908,8 @@ function renderAdd(){
   const delBtn = el.querySelector('#f-delete');
   if(delBtn) delBtn.onclick = ()=> confirmSheet('Delete this trade?','This removes it from your journal and stats. This can\'t be undone.',()=>{
     const dest = UI.returnTo||'history';
-    S.trades = S.trades.filter(t=>t.id!==f.editingId); save(); UI.form=null; UI.returnTo=null; toast('Trade deleted'); nav(dest);
+    S.trades = S.trades.filter(t=>t.id!==f.editingId); save(); UI.form=null; UI.returnTo=null; toast('Trade deleted');
+    history.replaceState({tab:dest}, '', '#'+dest); nav(dest, true);
   });
 }
 function saveTrade(){
@@ -923,7 +928,8 @@ function saveTrade(){
   const dest = f.editingId ? (UI.returnTo||'history') : 'calendar';
   if(f.editingId){ const i = S.trades.findIndex(t=>t.id===f.editingId); S.trades[i] = trade; toast('Trade updated'); }
   else { S.trades.push(trade); toast('Trade saved · ' + money(tradePnl(trade),true)); }
-  save(); UI.form = null; UI.returnTo = null; nav(dest);
+  save(); UI.form = null; UI.returnTo = null;
+  history.replaceState({tab:dest}, '', '#'+dest); nav(dest, true);
 }
 
 /* ============================================================
@@ -934,9 +940,17 @@ function renderHistory(){
   if(!S.accounts.length){ el.innerHTML = emptyOnboard(); return; }
   const fid = UI.historyFilter;
   const ftag = UI.historyTag || 'all';
-  let trades = [...S.trades].sort((a,b)=> a.date===b.date ? (b.createdAt-a.createdAt) : (a.date<b.date?1:-1));
-  if(fid!=='all') trades = trades.filter(t=>t.accountId===fid);
-  if(ftag!=='all') trades = trades.filter(t=> (t.tags||[]).includes(ftag));
+  let all = [...S.trades].sort((a,b)=> a.date===b.date ? (b.createdAt-a.createdAt) : (a.date<b.date?1:-1));
+  if(fid!=='all') all = all.filter(t=>t.accountId===fid);
+  if(ftag!=='all') all = all.filter(t=> (t.tags||[]).includes(ftag));
+
+  /* paginate, extending to the end of the last shown day so daily totals stay accurate */
+  const limit = UI.historyLimit || 150;
+  let trades = all.slice(0, limit);
+  while(trades.length && trades.length < all.length && all[trades.length].date === trades[trades.length-1].date){
+    trades.push(all[trades.length]);
+  }
+  const older = all.length - trades.length;
 
   let listHtml = '';
   if(!trades.length){
@@ -970,26 +984,30 @@ function renderHistory(){
 
   el.innerHTML = `
   <h2 style="font-size:1.3rem;margin:4px 2px 14px">History</h2>
-  <div class="filter-scroll">
+  ${S.accounts.length>1?`<div class="filter-scroll">
     <button class="select-chip ${fid==='all'?'on':''}" data-f="all">All accounts</button>
     ${S.accounts.map(a=>`<button class="select-chip ${fid===a.id?'on':''}" data-f="${a.id}">${esc(a.name)}</button>`).join('')}
-  </div>
+  </div>`:''}
   ${S.tags.length?`<div class="filter-scroll" style="margin-top:6px">
     <button class="select-chip ${ftag==='all'?'on':''}" data-t="all">All setups</button>
     ${S.tags.map(tg=>`<button class="select-chip ${ftag===tg?'on':''}" data-t="${esc(tg)}">${esc(tg)}</button>`).join('')}
   </div>`:''}
-  ${listHtml}`;
+  ${listHtml}
+  ${older>0?`<button class="btn-soft" id="h-more" style="width:100%;margin-top:8px">Show older · ${older} more trade${older===1?'':'s'}</button>`:''}`;
 
   el.querySelectorAll('.filter-scroll').forEach(row=>{
     row.onclick = e=>{
-      const bf=e.target.closest('[data-f]'); if(bf){ UI.historyFilter=bf.dataset.f; renderHistory(); return; }
-      const bt=e.target.closest('[data-t]'); if(bt){ UI.historyTag=bt.dataset.t; renderHistory(); }
+      const bf=e.target.closest('[data-f]'); if(bf){ UI.historyFilter=bf.dataset.f; UI.historyLimit=150; renderHistory(); return; }
+      const bt=e.target.closest('[data-t]'); if(bt){ UI.historyTag=bt.dataset.t; UI.historyLimit=150; renderHistory(); }
     };
   });
+  const more = el.querySelector('#h-more');
+  if(more) more.onclick = ()=>{ const keep = window.scrollY; UI.historyLimit = (UI.historyLimit||150) + 150; renderHistory(); window.scrollTo({top:keep}); };
   el.querySelectorAll('.trade-row').forEach(r=> r.onclick = ()=>{
     const t = S.trades.find(x=>x.id===r.dataset.id); if(!t) return;
     UI.form = formFromTrade(t);
     UI.returnTo = 'history';
+    UI.returnScroll = window.scrollY;
     nav('add');
   });
 }
@@ -1053,7 +1071,15 @@ function renderSettings(){
 
   <div class="card-glass">
     <div class="card-title"><h3>Data</h3></div>
-    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Your journal lives on this device. Export a backup regularly — restore it here or on another phone.</p>
+    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:8px">Your journal lives on this device. Export a backup regularly — restore it here or on another phone.</p>
+    ${(()=>{
+      const lb = S.settings.lastBackupAt;
+      if(!S.trades.length && !lb) return '';
+      const days = lb ? Math.floor((Date.now()-lb)/86400000) : null;
+      const stale = !lb || days > 14;
+      const txt = !lb ? 'Never backed up' : days===0 ? 'Last backup: today' : 'Last backup: '+days+' day'+(days===1?'':'s')+' ago';
+      return `<p style="font-size:.75rem;font-weight:700;margin-bottom:12px;color:${stale?'var(--gold-1)':'var(--green-deep)'}">${txt}${stale&&S.trades.length?' — export one now':''}</p>`;
+    })()}
     <div class="row-btns">
       <button class="btn-soft" id="s-export">${I.dl}Export backup</button>
       <button class="btn-soft" id="s-import">${I.ul}Import backup</button>
@@ -1247,6 +1273,8 @@ function exportData(){
   a.href = URL.createObjectURL(blob);
   a.download = 'tradetrackr-backup-'+todayISO()+'.json';
   a.click(); URL.revokeObjectURL(a.href);
+  S.settings.lastBackupAt = Date.now(); save();
+  if(UI.tab==='settings') renderSettings();
   toast('Backup exported');
 }
 document.getElementById('import-file').addEventListener('change', e=>{
@@ -1279,12 +1307,18 @@ function exportCSV(){
     const s = String(v ?? '');
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
   };
+  /* user-entered text: also neutralise leading =,+,-,@ so spreadsheets don't execute it as a formula */
+  const csvText = v => {
+    let s = String(v ?? '');
+    if(/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return csvEsc(s);
+  };
   const rows = [...S.trades]
     .sort((a,b)=> a.date===b.date ? a.createdAt-b.createdAt : (a.date<b.date?-1:1))
     .map(t=>{
       const p = tradePnl(t); const a = acct(t.accountId);
       const kind = classify(t);
-      return [t.date, a?a.name:'Deleted account', t.asset, t.direction.toUpperCase(), p.toFixed(2), kind.toUpperCase(), (t.tags||[]).join('; '), t.notes||''].map(csvEsc).join(',');
+      return [csvEsc(t.date), csvText(a?a.name:'Deleted account'), csvText(t.asset), csvEsc(t.direction.toUpperCase()), csvEsc(p.toFixed(2)), csvEsc(kind.toUpperCase()), csvText((t.tags||[]).join('; ')), csvText(t.notes||'')].join(',');
     });
   const csv = '\ufeff' + [cols.join(','), ...rows].join('\r\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
@@ -1307,7 +1341,8 @@ function nav(tab, fromPop){
   document.querySelectorAll('.nav-item').forEach(b=> b.classList.toggle('on', b.dataset.nav===tab));
   if(!fromPop && changed) history.pushState({tab}, '', '#'+tab);
   render();
-  window.scrollTo({top:0});
+  if(tab==='history' && UI.returnScroll!=null){ window.scrollTo({top:UI.returnScroll}); UI.returnScroll=null; }
+  else window.scrollTo({top:0});
 }
 function render(){
   if(UI.tab==='calendar') renderCalendar();
@@ -1331,6 +1366,7 @@ window.addEventListener('popstate', e=>{
 });
 
 if('serviceWorker' in navigator){ window.addEventListener('load',()=> navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
 
 let toastTimer;
 function toast(msg){
