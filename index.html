@@ -178,6 +178,8 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .dir-badge.sell{background:rgba(255,132,132,.16);color:var(--red)}
 .trade-row .meta{font-size:.72rem;color:var(--ink-faint);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .trade-row .note{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.74rem;color:var(--ink-dim);margin-top:5px;line-height:1.45;white-space:normal;word-break:break-word}
+.trade-row .tagrow{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.mini-tag{font-size:.6rem;font-weight:700;background:rgba(224,184,90,.14);color:var(--gold-1);border-radius:5px;padding:2px 7px;letter-spacing:.02em}
 .trade-row .pnl{font-weight:700;font-size:.95rem;text-align:right}
 .trade-row .pnl.pos{color:var(--green)}.trade-row .pnl.neg{color:var(--red)}.trade-row .pnl.be{color:var(--ink-dim)}
 .trade-row .pnl small{display:block;font-size:.65rem;color:var(--ink-faint);font-weight:500;margin-top:2px}
@@ -314,6 +316,7 @@ const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + St
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const DEFAULT_ASSETS = ['XAUUSD','EURUSD','GBPUSD','US30','NAS100','BTCUSD'];
+const DEFAULT_TAGS = ['Breakout','Retest','Reversal','Trend','News','Range'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTHS_S = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
@@ -321,9 +324,19 @@ let S = load();
 function load(){
   try{
     const raw = localStorage.getItem(LS_KEY);
-    if(raw){ const d = JSON.parse(raw); if(d && Array.isArray(d.accounts)){ d.settings = d.settings||{}; if(d.settings.beThreshold==null) d.settings.beThreshold = 0; return d; } }
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d && Array.isArray(d.accounts)){
+        d.settings = d.settings||{};
+        if(d.settings.beThreshold==null) d.settings.beThreshold = 0;
+        if(!Array.isArray(d.tags)) d.tags = [...DEFAULT_TAGS];
+        d.trades.forEach(t=>{ if(!Array.isArray(t.tags)) t.tags = []; });
+        d.accounts.forEach(a=>{ if(a.monthlyGoal==null) a.monthlyGoal = 0; });
+        return d;
+      }
+    }
   }catch(e){}
-  return { accounts:[], assets:[...DEFAULT_ASSETS], trades:[], txns:[], settings:{ defaultAccountId:null, defaultAsset:'XAUUSD', beThreshold:0 } };
+  return { accounts:[], assets:[...DEFAULT_ASSETS], tags:[...DEFAULT_TAGS], trades:[], txns:[], settings:{ defaultAccountId:null, defaultAsset:'XAUUSD', beThreshold:0 } };
 }
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ toast('Could not save — storage full'); } }
 
@@ -333,7 +346,7 @@ let UI = {
   tab:'calendar',
   statsAccountId:null,
   statsY: now.getFullYear(), statsM: now.getMonth(),
-  historyFilter:'all',
+  historyFilter:'all', historyTag:'all',
   form:null // add/edit trade form state
 };
 
@@ -507,6 +520,7 @@ function openDaySheet(iso){
         <span class="mid">
           <span class="sym">${esc(t.asset)}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
           ${t.layers.length>1?`<span class="meta">${t.layers.length} entries</span>`:''}
+          ${t.tags&&t.tags.length?`<span class="tagrow">${t.tags.map(tg=>`<span class="mini-tag">${esc(tg)}</span>`).join('')}</span>`:''}
           ${t.notes?`<span class="note">${esc(t.notes)}</span>`:''}
         </span>
         <span class="pnl ${cls}">${kind==='be'?'BE':money(p,true)}${kind==='be'?'<small>'+money(p,true)+'</small>':''}</span>
@@ -549,6 +563,18 @@ function renderStats(){
   const startBal = acct(aid).startingBalance || 0;
   const pctBase = (bal - monthPnl);
   const monthPct = pctBase !== 0 ? (monthPnl/Math.abs(pctBase)*100) : null;
+  const goal = acct(aid).monthlyGoal || 0;
+  const goalPct = goal>0 ? Math.max(0, Math.min(100, (monthPnl/goal)*100)) : 0;
+  const goalHit = goal>0 && monthPnl >= goal;
+
+  /* per-asset breakdown for the selected month */
+  const byAsset = {};
+  mt.forEach(t=>{
+    byAsset[t.asset] = byAsset[t.asset] || {n:0,pnl:0,w:0,l:0};
+    const b = byAsset[t.asset]; b.n++; b.pnl += tradePnl(t);
+    const k = classify(t); if(k==='win') b.w++; else if(k==='loss') b.l++;
+  });
+  const assetRows = Object.entries(byAsset).sort((a,b)=> b[1].pnl - a[1].pnl);
 
   el.innerHTML = `
   <div class="hero">
@@ -579,6 +605,18 @@ function renderStats(){
     <button class="m-btn" id="m-next" aria-label="Next month" ${isCurrent?'disabled':''}>${I.chevR}</button>
   </div>
 
+  ${goal>0 ? `
+  <div class="card-navy">
+    <div class="card-title"><h3>Monthly goal</h3><span class="sub">${goalHit?'Goal reached':money(goal)+' target'}</span></div>
+    <div class="wl-bar" style="height:14px">
+      <span style="width:${goalPct}%;background:${goalHit?'var(--green)':'linear-gradient(90deg,var(--gold-2),var(--gold-1))'}"></span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:.78rem;color:var(--ink-dim)">
+      <span>${money(monthPnl,true)} of ${money(goal)}</span>
+      <span style="font-weight:700;color:${goalHit?'var(--green)':'var(--gold-1)'}">${goalPct.toFixed(0)}%</span>
+    </div>
+  </div>` : ''}
+
   <div class="stat-grid">
     <div class="stat-cell"><div class="k">${I.wallet}Monthly PnL</div><div class="v ${monthPnl>0?'pos':monthPnl<0?'neg':''}">${money(monthPnl,true)}</div></div>
     <div class="stat-cell"><div class="k">${I.target}Winrate</div><div class="v">${winrate===null?'—':winrate.toFixed(1)+'%'}</div></div>
@@ -599,6 +637,22 @@ function renderStats(){
       <span class="li"><span class="dot" style="background:var(--red)"></span><b>${losses.length}</b>&nbsp;Losses</span>
       <span class="li"><span class="dot" style="background:var(--blue-soft)"></span><b>${bes.length}</b>&nbsp;Breakeven</span>
     </div>` : `<div class="empty-chart">No trades taken this month.</div>`}
+  </div>
+
+  <div class="card-navy">
+    <div class="card-title"><h3>By asset</h3><span class="sub">${MONTHS_S[m]} ${y}</span></div>
+    ${assetRows.length ? assetRows.map(([sym,b])=>{
+      const dec = b.w+b.l;
+      const wr = dec ? (b.w/dec*100) : null;
+      return `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <span class="ava" style="width:34px;height:34px;font-size:.62rem">${esc(sym.slice(0,3))}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.86rem">${esc(sym)}</div>
+          <div style="font-size:.7rem;color:var(--ink-faint)">${b.n} trade${b.n===1?'':'s'}${wr===null?'':' · '+wr.toFixed(0)+'% winrate'}</div>
+        </div>
+        <div style="font-weight:700;font-size:.9rem;color:${b.pnl>0?'var(--green)':b.pnl<0?'var(--red)':'var(--ink-dim)'}">${money(b.pnl,true)}</div>
+      </div>`;
+    }).join('') : `<div class="empty-chart">No trades taken this month.</div>`}
   </div>
 
   <div class="card-navy">
@@ -699,11 +753,11 @@ function monthlyBarsSVG(aid, y, m){
 function blankForm(){
   const d = defAcct();
   return { editingId:null, accountId: d ? d.id : null, asset: S.settings.defaultAsset || S.assets[0] || null,
-           direction:'buy', entries:[{sign:1, str:''}], notes:'', date: todayISO() };
+           direction:'buy', entries:[{sign:1, str:''}], tags:[], notes:'', date: todayISO() };
 }
 function formFromTrade(t){
   return { editingId:t.id, accountId:t.accountId, asset:t.asset, direction:t.direction,
-    entries: t.layers.map(v=>({sign: v<0?-1:1, str: String(Math.abs(v))})), notes:t.notes, date:t.date };
+    entries: t.layers.map(v=>({sign: v<0?-1:1, str: String(Math.abs(v))})), tags:[...(t.tags||[])], notes:t.notes, date:t.date };
 }
 const calcNet = f => f.entries.reduce((s,e)=> s + (e.sign * (parseFloat(e.str)||0)), 0);
 const calcExpr = f => f.entries.map((e,i)=>{
@@ -742,6 +796,12 @@ function renderAdd(){
     <button class="sell ${f.direction==='sell'?'on':''}" data-dir="sell">${I.down}Sell</button>
   </div>
 
+  <div class="section-label">Setup <span style="text-transform:none;font-weight:500;color:var(--ink-faint)">· optional</span></div>
+  <div class="chips" id="f-tags">
+    ${S.tags.map(tg=>`<button class="select-chip ${f.tags.includes(tg)?'on':''}" data-tag="${esc(tg)}">${esc(tg)}</button>`).join('')}
+    <button class="select-chip ghost" id="f-new-tag">${I.plus}New</button>
+  </div>
+
   <div class="section-label">PnL calculator</div>
   <div class="calc">
     <div class="net-label">Net PnL</div>
@@ -771,6 +831,12 @@ function renderAdd(){
     if(e.target.closest('#f-new-asset')) openAssetSheet(sym => { f.asset=sym; renderAdd(); });
   };
   el.querySelectorAll('[data-dir]').forEach(b=> b.onclick = ()=>{ f.direction=b.dataset.dir; renderAdd(); });
+
+  el.querySelector('#f-tags').onclick = e => {
+    const b=e.target.closest('[data-tag]');
+    if(b){ const tg=b.dataset.tag; f.tags = f.tags.includes(tg) ? f.tags.filter(x=>x!==tg) : [...f.tags, tg]; renderAdd(); return; }
+    if(e.target.closest('#f-new-tag')) openTagSheet(tg => { if(!f.tags.includes(tg)) f.tags.push(tg); renderAdd(); });
+  };
 
   el.querySelector('#keypad').onclick = e => {
     const b = e.target.closest('[data-k]'); if(!b) return;
@@ -821,7 +887,7 @@ function saveTrade(){
   const trade = {
     id: f.editingId || uid(),
     accountId: f.accountId, asset: f.asset, direction: f.direction,
-    layers, notes: f.notes.trim(), date: f.date || todayISO(),
+    layers, tags: f.tags||[], notes: f.notes.trim(), date: f.date || todayISO(),
     createdAt: f.editingId ? (S.trades.find(t=>t.id===f.editingId)?.createdAt || Date.now()) : Date.now()
   };
   if(f.editingId){ const i = S.trades.findIndex(t=>t.id===f.editingId); S.trades[i] = trade; toast('Trade updated'); }
@@ -836,12 +902,14 @@ function renderHistory(){
   const el = document.getElementById('view-history');
   if(!S.accounts.length){ el.innerHTML = emptyOnboard(); return; }
   const fid = UI.historyFilter;
+  const ftag = UI.historyTag || 'all';
   let trades = [...S.trades].sort((a,b)=> a.date===b.date ? (b.createdAt-a.createdAt) : (a.date<b.date?1:-1));
   if(fid!=='all') trades = trades.filter(t=>t.accountId===fid);
+  if(ftag!=='all') trades = trades.filter(t=> (t.tags||[]).includes(ftag));
 
   let listHtml = '';
   if(!trades.length){
-    listHtml = `<div class="empty-state">${I.book}<p><b>Nothing on record.</b><br>The journal starts with the next trade you take.</p></div>`;
+    listHtml = `<div class="empty-state">${I.book}<p><b>${S.trades.length?'No trades match this filter.':'Nothing on record.'}</b><br>${S.trades.length?'Try a different account or tag.':'The journal starts with the next trade you take.'}</p></div>`;
   } else {
     let curDay = null;
     for(const t of trades){
@@ -860,6 +928,7 @@ function renderHistory(){
         <span class="mid">
           <span class="sym">${esc(t.asset)}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
           <span class="meta">${esc(a?a.name:'Deleted account')}${t.layers.length>1?' · '+t.layers.length+' layers':''}</span>
+          ${t.tags&&t.tags.length?`<span class="tagrow">${t.tags.map(tg=>`<span class="mini-tag">${esc(tg)}</span>`).join('')}</span>`:''}
           ${t.notes?`<span class="note">${esc(t.notes)}</span>`:''}
         </span>
         <span class="pnl ${cls}">${kind==='be'?'BE':money(p,true)}${kind==='be'?'<small>'+money(p,true)+'</small>':''}</span>
@@ -874,9 +943,18 @@ function renderHistory(){
     <button class="select-chip ${fid==='all'?'on':''}" data-f="all">All accounts</button>
     ${S.accounts.map(a=>`<button class="select-chip ${fid===a.id?'on':''}" data-f="${a.id}">${esc(a.name)}</button>`).join('')}
   </div>
+  ${S.tags.length?`<div class="filter-scroll" style="margin-top:6px">
+    <button class="select-chip ${ftag==='all'?'on':''}" data-t="all">All setups</button>
+    ${S.tags.map(tg=>`<button class="select-chip ${ftag===tg?'on':''}" data-t="${esc(tg)}">${esc(tg)}</button>`).join('')}
+  </div>`:''}
   ${listHtml}`;
 
-  el.querySelector('.filter-scroll').onclick = e=>{ const b=e.target.closest('[data-f]'); if(b){ UI.historyFilter=b.dataset.f; renderHistory(); } };
+  el.querySelectorAll('.filter-scroll').forEach(row=>{
+    row.onclick = e=>{
+      const bf=e.target.closest('[data-f]'); if(bf){ UI.historyFilter=bf.dataset.f; renderHistory(); return; }
+      const bt=e.target.closest('[data-t]'); if(bt){ UI.historyTag=bt.dataset.t; renderHistory(); }
+    };
+  });
   el.querySelectorAll('.trade-row').forEach(r=> r.onclick = ()=>{
     const t = S.trades.find(x=>x.id===r.dataset.id); if(!t) return;
     UI.form = formFromTrade(t);
@@ -920,6 +998,19 @@ function renderSettings(){
   </div>
 
   <div class="card-glass">
+    <div class="card-title"><h3>Setup tags</h3></div>
+    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Tag trades by setup — filter History by tag or spot which setups perform in Stats.</p>
+    <div>
+      ${S.tags.map(tg=>`
+      <span class="asset-tag" data-tg="${esc(tg)}">
+        <span>${esc(tg)}</span>
+        <button data-act="rm-tag" aria-label="Remove ${esc(tg)}">${I.x}</button>
+      </span>`).join('')}
+      <span class="asset-tag" style="background:transparent;border:1px dashed rgba(19,44,77,.3)"><button data-act="add-tag" style="display:flex;align-items:center;gap:6px;font:inherit;color:var(--ink-dark-dim)">${I.plus}Add</button></span>
+    </div>
+  </div>
+
+  <div class="card-glass">
     <div class="card-title"><h3>Preferences</h3></div>
     <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Breakeven threshold — trades with net PnL between <b>−$<span id="be-echo">${(S.settings.beThreshold||0)}</span></b> and <b>+$<span id="be-echo2">${(S.settings.beThreshold||0)}</span></b> count as breakeven and are excluded from your winrate.</p>
     <div class="field" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)">
@@ -935,6 +1026,7 @@ function renderSettings(){
       <button class="btn-soft" id="s-export">${I.dl}Export backup</button>
       <button class="btn-soft" id="s-import">${I.ul}Import backup</button>
     </div>
+    <button class="btn-soft" id="s-export-csv" style="width:100%;margin-top:10px">${I.hash}Export trades as CSV</button>
     <button class="btn-danger-ghost" id="s-reset" style="margin-top:14px">${I.trash}Erase all data</button>
   </div>`;
 
@@ -963,6 +1055,12 @@ function renderSettings(){
     };
   });
   el.querySelector('[data-act="add-asset"]').onclick = ()=> openAssetSheet(()=> renderSettings());
+  el.querySelector('[data-act="add-tag"]').onclick = ()=> openTagSheet(()=> renderSettings());
+  el.querySelectorAll('[data-act="rm-tag"]').forEach(b=> b.onclick = ()=>{
+    const tg = b.closest('[data-tg]').dataset.tg;
+    S.tags = S.tags.filter(x=>x!==tg);
+    save(); renderSettings();
+  });
   const beIn = el.querySelector('#s-be');
   beIn.addEventListener('input', e=>{
     e.target.value = e.target.value.replace(/[^0-9.]/g,'');
@@ -975,9 +1073,10 @@ function renderSettings(){
     save(); toast('Breakeven threshold: ±' + money(S.settings.beThreshold));
   });
   el.querySelector('#s-export').onclick = exportData;
+  el.querySelector('#s-export-csv').onclick = exportCSV;
   el.querySelector('#s-import').onclick = ()=> document.getElementById('import-file').click();
   el.querySelector('#s-reset').onclick = ()=> confirmSheet('Erase all data?','Every account, trade, and note will be permanently deleted from this device.',()=>{
-    localStorage.removeItem(LS_KEY); S = load(); UI = {tab:'calendar',statsAccountId:null,statsY:now.getFullYear(),statsM:now.getMonth(),historyFilter:'all',form:null};
+    localStorage.removeItem(LS_KEY); S = load(); UI = {tab:'calendar',statsAccountId:null,statsY:now.getFullYear(),statsM:now.getMonth(),historyFilter:'all', historyTag:'all', form:null};
     toast('All data erased'); nav('calendar');
   });
 }
@@ -1008,16 +1107,19 @@ function openAccountSheet(editId){
     <p class="desc">${a?'Rename or adjust the starting balance.':'Give it a name and its starting balance — everything else builds from there.'}</p>
     <div class="field">${I.wallet}<input id="sh-name" placeholder="Account name (e.g. FTMO 100k)" value="${a?esc(a.name):''}" maxlength="30"></div>
     <div class="field"><span style="font-weight:700;color:var(--ink-dark-dim)">$</span><input id="sh-bal" type="text" inputmode="decimal" placeholder="Starting balance" value="${a?a.startingBalance:''}"></div>
+    <div class="field">${I.target}<input id="sh-goal" type="text" inputmode="decimal" placeholder="Monthly PnL goal (optional)" value="${a&&a.monthlyGoal?a.monthlyGoal:''}"></div>
     <button class="btn-primary" id="sh-save" style="margin-top:8px">${I.check}${a?'Save changes':'Create account'}</button>
   `);
   document.getElementById('sh-bal').addEventListener('input',e=> e.target.value=e.target.value.replace(/[^0-9.]/g,''));
+  document.getElementById('sh-goal').addEventListener('input',e=> e.target.value=e.target.value.replace(/[^0-9.]/g,''));
   document.getElementById('sh-save').onclick = ()=>{
     const name = document.getElementById('sh-name').value.trim();
     const bal = parseFloat(document.getElementById('sh-bal').value)||0;
+    const goal = parseFloat(document.getElementById('sh-goal').value)||0;
     if(!name) return toast('Enter a name');
-    if(a){ a.name=name; a.startingBalance=bal; toast('Account updated'); }
+    if(a){ a.name=name; a.startingBalance=bal; a.monthlyGoal=goal; toast('Account updated'); }
     else{
-      const acc = {id:uid(), name, startingBalance:bal, createdAt:Date.now()};
+      const acc = {id:uid(), name, startingBalance:bal, monthlyGoal:goal, createdAt:Date.now()};
       S.accounts.push(acc);
       if(!S.settings.defaultAccountId) S.settings.defaultAccountId = acc.id;
       toast('Account created');
@@ -1045,6 +1147,23 @@ function openTxnSheet(aid, kind){
     save(); closeSheet(); toast((isDep?'Deposited ':'Withdrew ')+money(amt)); render();
   };
   setTimeout(()=>document.getElementById('sh-amt').focus(),100);
+}
+
+function openTagSheet(onDone){
+  openSheet(`
+    <h3>New setup tag</h3>
+    <p class="desc">Add a setup or pattern you trade — e.g. Breakout, Retest, Reversal.</p>
+    <div class="field">${I.hash}<input id="sh-tag" placeholder="Tag name" maxlength="20"></div>
+    <button class="btn-primary" id="sh-save" style="margin-top:8px">${I.check}Add tag</button>
+  `);
+  document.getElementById('sh-save').onclick = ()=>{
+    const tg = document.getElementById('sh-tag').value.trim();
+    if(!tg) return toast('Enter a tag name');
+    if(!S.tags.includes(tg)) S.tags.push(tg);
+    save(); closeSheet(); toast(tg+' added');
+    if(onDone) onDone(tg);
+  };
+  setTimeout(()=>document.getElementById('sh-tag').focus(),100);
 }
 
 function openAssetSheet(onDone){
@@ -1098,7 +1217,9 @@ document.getElementById('import-file').addEventListener('change', e=>{
       const d = j.data && Array.isArray(j.data.accounts) ? j.data : (Array.isArray(j.accounts) ? j : null);
       if(!d) throw 0;
       confirmSheet('Restore this backup?','This replaces everything currently on this device with the backup file.',()=>{
-        S = { accounts:d.accounts||[], assets:d.assets||[...DEFAULT_ASSETS], trades:d.trades||[], txns:d.txns||[], settings:d.settings||{defaultAccountId:d.accounts?.[0]?.id||null, defaultAsset:'XAUUSD'} };
+        S = { accounts:d.accounts||[], assets:d.assets||[...DEFAULT_ASSETS], tags:d.tags||[...DEFAULT_TAGS], trades:d.trades||[], txns:d.txns||[], settings:d.settings||{defaultAccountId:d.accounts?.[0]?.id||null, defaultAsset:'XAUUSD', beThreshold:0} };
+        S.trades.forEach(t=>{ if(!Array.isArray(t.tags)) t.tags = []; });
+        S.accounts.forEach(a=>{ if(a.monthlyGoal==null) a.monthlyGoal = 0; });
         save(); UI.statsAccountId=null; UI.historyFilter='all'; UI.form=null;
         toast('Backup restored'); nav('calendar');
       });
@@ -1109,6 +1230,29 @@ document.getElementById('import-file').addEventListener('change', e=>{
   };
   reader.readAsText(file);
 });
+
+function exportCSV(){
+  if(!S.trades.length) return toast('No trades to export yet');
+  const cols = ['Date','Account','Asset','Direction','PnL','Result','Tags','Notes'];
+  const csvEsc = v => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const rows = [...S.trades]
+    .sort((a,b)=> a.date===b.date ? a.createdAt-b.createdAt : (a.date<b.date?-1:1))
+    .map(t=>{
+      const p = tradePnl(t); const a = acct(t.accountId);
+      const kind = classify(t);
+      return [t.date, a?a.name:'Deleted account', t.asset, t.direction.toUpperCase(), p.toFixed(2), kind.toUpperCase(), (t.tags||[]).join('; '), t.notes||''].map(csvEsc).join(',');
+    });
+  const csv = [cols.join(','), ...rows].join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tradetrackr-trades-' + todayISO() + '.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('CSV exported · ' + S.trades.length + ' trades');
+}
 
 
 /* ============================================================
