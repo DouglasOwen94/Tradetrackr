@@ -318,6 +318,10 @@ const cleanNum = v => { const p = String(v).replace(/[^0-9.]/g,'').split('.'); r
 
 const DEFAULT_ASSETS = ['XAUUSD','EURUSD','GBPUSD','US30','NAS100','BTCUSD'];
 const DEFAULT_TAGS = ['Breakout','Retest','Reversal','Trend','News','Range'];
+/* Journal tag set — HTF level / entry model / discipline. Load from Settings. */
+const JOURNAL_TAGS = ['WO','WH','WL','WC','DO','DH','DL','DC','MO','+4H','Tap','5mEng','1hEng>5m','DailyEng','Rules-Y','Rules-N'];
+/* Skeleton inserted into the notes box. Keep it short enough to fill in under a minute. */
+const NOTE_TEMPLATE = 'P: \nE: Best+  Worst-  out \nL: \n';
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTHS_S = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
@@ -850,8 +854,12 @@ function renderAdd(){
   <div class="section-label">Date</div>
   <div class="field">${I.cal}<input type="date" id="f-date" value="${f.date}" max="${todayISO()}"></div>
 
-  <div class="section-label">Notes</div>
-  <div class="field">${I.note}<textarea id="f-notes" placeholder="e.g. London sweep, entered on the retest. Exited early — red folder news at 14:30.">${esc(f.notes)}</textarea></div>
+  <div class="section-label">Journal</div>
+  <div class="chips" id="f-note-tools">
+    <button class="select-chip ghost" id="f-tpl">${I.plus}Template</button>
+    <button class="select-chip ghost" id="f-legend">${I.note}Legend</button>
+  </div>
+  <div class="field">${I.note}<textarea id="f-notes" placeholder="P: WO 3344 SL80 TP80 — tap Template to start">${esc(f.notes)}</textarea></div>
 
   <button class="btn-primary" id="f-save">${I.check}${editing?'Save changes':'Save trade'}</button>
   ${editing?`<button class="btn-danger-ghost" id="f-delete">${I.trash}Delete trade</button>`:''}`;
@@ -900,6 +908,14 @@ function renderAdd(){
   };
 
   el.querySelector('#f-date').onchange = e=> f.date = e.target.value || todayISO();
+  el.querySelector('#f-tpl').onclick = ()=>{
+    if(!f.notes.trim()) f.notes = NOTE_TEMPLATE;
+    else if(!/^P:/m.test(f.notes)) f.notes = NOTE_TEMPLATE + '\n' + f.notes;
+    renderAdd();
+    setTimeout(()=>{ const t = document.getElementById('f-notes'); if(t){ t.focus(); t.setSelectionRange(3,3); } }, 40);
+  };
+  el.querySelector('#f-legend').onclick = openLegendSheet;
+
   const ta = el.querySelector('#f-notes');
   const growTa = ()=>{ ta.style.height='auto'; ta.style.height = Math.max(84, Math.min(ta.scrollHeight, 340)) + 'px'; };
   ta.oninput = e=>{ f.notes = e.target.value; growTa(); };
@@ -1058,6 +1074,17 @@ function renderSettings(){
       </span>`).join('')}
       <span class="asset-tag" style="background:transparent;border:1px dashed rgba(19,44,77,.3)"><button data-act="add-tag" style="display:flex;align-items:center;gap:6px;font:inherit;color:var(--ink-dark-dim)">${I.plus}Add</button></span>
     </div>
+    <button class="btn-soft" id="s-journal-tags" style="width:100%;margin-top:12px">${I.plus}Load journal tag set</button>
+    <p style="font-size:.72rem;color:var(--ink-dark-dim);margin-top:8px">Adds the HTF level, entry model and rules tags. Nothing is removed.</p>
+  </div>
+
+  <div class="card-glass">
+    <div class="card-title"><h3>Journal format</h3></div>
+    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Same three lines every trade \u2014 that\'s what makes the weekly review work.</p>
+    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.74rem;line-height:1.6;overflow-x:auto;white-space:pre;color:var(--ink-dark)">P: WO 3344 SL80 TP80
+E: Best+145 Worst-22 out3327 BE@60
+L: closed 7p before TP out of fear</pre>
+    <button class="btn-soft" id="s-legend" style="width:100%;margin-top:12px">${I.note}What each line means</button>
   </div>
 
   <div class="card-glass">
@@ -1084,6 +1111,7 @@ function renderSettings(){
       <button class="btn-soft" id="s-export">${I.dl}Export backup</button>
       <button class="btn-soft" id="s-import">${I.ul}Import backup</button>
     </div>
+    <button class="btn-soft" id="s-export-week" style="width:100%;margin-top:10px">${I.note}Weekly report \u2014 for AI review</button>
     <button class="btn-soft" id="s-export-csv" style="width:100%;margin-top:10px">${I.hash}Export trades as CSV</button>
     <button class="btn-danger-ghost" id="s-reset" style="margin-top:14px">${I.trash}Erase all data</button>
   </div>`;
@@ -1138,7 +1166,15 @@ function renderSettings(){
     save(); toast('Breakeven threshold: ±' + money(S.settings.beThreshold));
   });
   el.querySelector('#s-export').onclick = exportData;
+  el.querySelector('#s-export-week').onclick = exportWeekly;
   el.querySelector('#s-export-csv').onclick = exportCSV;
+  el.querySelector('#s-legend').onclick = openLegendSheet;
+  el.querySelector('#s-journal-tags').onclick = ()=>{
+    const added = JOURNAL_TAGS.filter(tg=> !S.tags.some(x=> x.toLowerCase()===tg.toLowerCase()));
+    if(!added.length) return toast('Journal tags already loaded');
+    S.tags.push(...added); save(); renderSettings();
+    toast(added.length+' tag'+(added.length===1?'':'s')+' added');
+  };
   el.querySelector('#s-import').onclick = ()=> document.getElementById('import-file').click();
   el.querySelector('#s-reset').onclick = ()=> confirmSheet('Erase all data?','Every account, trade, and note will be permanently deleted from this device.',()=>{
     localStorage.removeItem(LS_KEY); S = load(); UI = {tab:'calendar',statsAccountId:null,statsY:now.getFullYear(),statsM:now.getMonth(),historyFilter:'all', historyTag:'all', form:null};
@@ -1251,6 +1287,28 @@ function openAssetSheet(onDone){
   setTimeout(()=>document.getElementById('sh-sym').focus(),100);
 }
 
+function openLegendSheet(){
+  const row = (k,v)=>`<div style="display:flex;gap:10px;padding:5px 0;font-size:.82rem;line-height:1.45">
+    <b style="min-width:52px;color:var(--gold-1)">${k}</b><span style="color:var(--ink-dark-dim)">${v}</span></div>`;
+  openSheet(`
+    <h3>Journal format</h3>
+    <p class="desc">Two lines before you enter, two after close. Under a minute.</p>
+    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.76rem;line-height:1.6;overflow-x:auto;white-space:pre;margin-bottom:14px">P: WO 3344 SL80 TP80
+E: Best+145 Worst-22 out3327 BE@60
+L: closed 7p before TP out of fear</pre>
+    ${row('P','Level, entry price, stop pips, target pips. Write this <b>before</b> you click buy.')}
+    ${row('E','Best = furthest it went your way. Worst = furthest against. Exit price. Stop moved?')}
+    ${row('L','One specific lesson. Not \u201cbe patient\u201d \u2014 something you can check next week.')}
+    <div class="section-label" style="margin-top:16px">Tags</div>
+    ${row('Level','WO WH WL WC \u00b7 DO DH DL DC \u00b7 MO \u00b7 +4H if you refined')}
+    ${row('Entry','Tap \u00b7 5mEng \u00b7 1hEng&gt;5m \u00b7 DailyEng')}
+    ${row('Rules','Rules-Y if you followed your plan, Rules-N if you didn\'t. Tag it honestly \u2014 the Rules-N trades are the useful ones.')}
+    <p class="desc" style="margin-top:14px">Rules-N = entered before your trigger, stop over 100 pips, not a level on your list, added a layer to a loser, or a revenge/FOMO entry.</p>
+    <button class="btn-primary" id="sh-ok" style="margin-top:8px">${I.check}Got it</button>
+  `);
+  document.getElementById('sh-ok').onclick = closeSheet;
+}
+
 function confirmSheet(title, desc, onYes){
   openSheet(`
     <h3>${esc(title)}</h3>
@@ -1299,6 +1357,70 @@ document.getElementById('import-file').addEventListener('change', e=>{
   };
   reader.readAsText(file);
 });
+
+function weekStartISO(){
+  const d = new Date(); d.setDate(d.getDate()-6);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function statBlock(list){
+  const r2 = n => Math.round(n*100)/100;
+  const sum = a => a.reduce((s,x)=>s+x,0);
+  const thr = Math.abs(S.settings.beThreshold||0);
+  const p = list.map(tradePnl);
+  const wins = p.filter(x=>x>thr), losses = p.filter(x=>x<-thr), bes = p.filter(x=>x>=-thr&&x<=thr);
+  return {
+    trades: list.length, wins: wins.length, losses: losses.length, breakevens: bes.length,
+    winRatePct: (wins.length+losses.length) ? r2(wins.length/(wins.length+losses.length)*100) : null,
+    netPnl: r2(sum(p)),
+    avgWin: wins.length ? r2(sum(wins)/wins.length) : null,
+    avgLoss: losses.length ? r2(sum(losses)/losses.length) : null,
+    largestWin: p.length ? r2(Math.max.apply(null,p)) : null,
+    largestLoss: p.length ? r2(Math.min.apply(null,p)) : null,
+    layeredTrades: list.filter(t=>(t.layers||[]).length>1).length
+  };
+}
+function groupBlock(list, keyFn){
+  const m = {};
+  list.forEach(t=>{ (keyFn(t)||['(untagged)']).forEach(k=>{ (m[k]=m[k]||[]).push(t); }); });
+  const out = {}; Object.keys(m).forEach(k=> out[k] = statBlock(m[k]));
+  return out;
+}
+function exportWeekly(){
+  if(!S.trades.length) return toast('No trades to report yet');
+  const r2 = n => Math.round(n*100)/100;
+  const from = weekStartISO(), to = todayISO();
+  const week = S.trades.filter(t=> t.date>=from && t.date<=to)
+    .sort((a,b)=> a.date===b.date ? a.createdAt-b.createdAt : (a.date<b.date?-1:1));
+  const report = {
+    app:'tradetrackr', report:'weekly', version:1,
+    generatedAt: new Date().toISOString(),
+    period: { from, to },
+    accounts: S.accounts.map(a=>({
+      name: a.name, startingBalance: a.startingBalance,
+      currentBalance: r2(balance(a.id)), monthlyGoal: a.monthlyGoal||0
+    })),
+    thisWeek: statBlock(week),
+    allTime: statBlock(S.trades),
+    thisWeekByTag: groupBlock(week, t=> (t.tags&&t.tags.length) ? t.tags : null),
+    allTimeByTag: groupBlock(S.trades, t=> (t.tags&&t.tags.length) ? t.tags : null),
+    thisWeekByDirection: groupBlock(week, t=>[t.direction]),
+    trades: week.map(t=>({
+      date: t.date, asset: t.asset, direction: t.direction,
+      pnl: r2(tradePnl(t)), layers: t.layers, result: classify(t),
+      tags: t.tags||[], notes: t.notes||''
+    }))
+  };
+  const txt = JSON.stringify(report, null, 2);
+  const blob = new Blob([txt], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tradetrackr-weekly-'+to+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  const done = extra => toast('Weekly report \u00b7 '+week.length+' trade'+(week.length===1?'':'s')+extra);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>done(' \u00b7 copied + saved'), ()=>done(' saved'));
+  } else done(' saved');
+}
 
 function exportCSV(){
   if(!S.trades.length) return toast('No trades to export yet');
