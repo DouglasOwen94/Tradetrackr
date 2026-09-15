@@ -152,6 +152,17 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .fix-banner:focus-visible{outline:2px solid var(--red);outline-offset:2px}
 .fix-item{margin-bottom:6px}
 .fix-why{font-size:.74rem;color:var(--red);line-height:1.45;margin:0 2px 6px}
+.combo-plus{align-self:center;font-size:.72rem;font-weight:700;color:var(--ink-faint);margin:0 -1px}
+.num-block{margin:10px 0 4px}
+.num-block .big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.num-block .big b{font-size:1.4rem;font-weight:800;font-variant-numeric:tabular-nums}
+.num-block .big span{font-size:.76rem;color:var(--ink-dim)}
+.num-block p{font-size:.76rem;color:var(--ink-faint);margin-top:4px;line-height:1.45}
+.num-block p b{font-variant-numeric:tabular-nums}
+.split{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.split div{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:9px 12px;font-size:.76rem;color:var(--ink-faint)}
+.split div strong{min-width:84px;color:var(--ink);font-weight:700}
+.split div .r{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
 .combo-top{display:flex;align-items:flex-start;gap:10px}
 .combo-tags{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:5px}
 .combo-tags .mini-tag.mini-tag{font-size:.7rem;padding:5px 9px}
@@ -700,17 +711,17 @@ function renderStats(){
       <div class="combo-top">
         <div class="combo-tags">
           <span class="mini-tag">${esc(c.level)}</span>
-          ${c.refine?`<span class="mini-tag soft">${esc(c.refine)}</span>`:''}
+          <span class="combo-plus" aria-hidden="true">+</span>
           <span class="mini-tag">${esc(c.entry)}</span>
         </div>
         <div class="combo-adj">
           <b style="color:${rColor(c.adjR)}">${c.nR ? fmtR(c.adjR) : money(c.pnl,true)}</b>
-          <span>${c.nR ? 'adjusted' : 'no R yet'}</span>
+          <span>${c.nR ? 'estimate' : 'no R yet'}</span>
         </div>
         <span class="setup-chev">${I.chevR}</span>
       </div>
       <div class="combo-mid">
-        <span class="grow">${c.n} trade${c.n===1?'':'s'} · <span class="${c.w?'w':''}" style="${c.w?'color:var(--green)':''}">${c.w}W</span> <span style="${c.l?'color:var(--red)':''}">${c.l}L</span> <span style="${c.be?'color:var(--ink-dim)':''}">${c.be}BE</span>${c.nR ? ' · raw '+fmtR(c.rawR) : ''}</span>
+        <span class="grow">${c.n} trade${c.n===1?'':'s'} · <span class="${c.w?'w':''}" style="${c.w?'color:var(--green)':''}">${c.w}W</span> <span style="${c.l?'color:var(--red)':''}">${c.l}L</span> <span style="${c.be?'color:var(--ink-dim)':''}">${c.be}BE</span>${c.refined ? ' · '+c.refined+' refined' : ''}</span>
         ${c.verdict ? `<span class="verdict ${c.verdict}">${c.verdict==='edge'?'Edge':'Leak'}</span>` : ''}
       </div>
       <div class="meter" role="img" aria-label="${c.w} wins, ${c.l} losses, ${c.be} breakeven. ${c.nR} of ${SAMPLE_N} trades with R">
@@ -855,7 +866,7 @@ function renderStats(){
       </button>` : ''}
       ${comboShown.map(comboRowHTML).join('')}
       ${combo.rows.length > COMBO_SHOW ? `<button class="combo-more" data-combos-all>${UI.combosAll ? 'Show top '+COMBO_SHOW : 'Show all '+combo.rows.length+' combos'}</button>` : ''}
-      <p class="setup-note">Sorted by adjusted R per trade: combos with few trades are pulled toward your average of ${fmtR(combo.avgR)}, so one lucky trade can't top the list. Edge and Leak only appear once a combo's result is clearly above or below 0R.</p>`
+      <p class="setup-note">Each combo is a level plus an entry; refined and unrefined trades count together. Sorted by estimated R per trade: a combo with few trades is pulled toward your overall average of ${fmtR(combo.avgR)}, so one lucky trade can't top the list. Edge and Leak only appear once a combo's result is clearly above or below 0R.</p>`
       : `<div class="empty-chart">${combo.total ? 'Tag trades with one level and one entry to see combos.' : 'No trades logged on this account yet.'}</div>`}
   </div>
 
@@ -1011,7 +1022,7 @@ const calcExpr = f => f.entries.map((e,i)=>{
   return (e.sign<0?' − ':' + ') + num;
 }).join('');
 
-/* ---------- Combos: Level + Refine + Entry, ranked by adjusted R ---------- */
+/* ---------- Combos: Level + Entry (refinement belongs to the level), ranked by estimated R ---------- */
 const COMBO_K = 10;     /* trades of "pull" toward your overall average */
 const COMBO_Z = 2.5;    /* strictness for Edge / Leak (stricter than 2 because many combos are checked) */
 const COMBO_MIN = 10;   /* no verdict below this many trades with R */
@@ -1021,7 +1032,7 @@ function comboParts(t){
   const of = g => (t.tags||[]).filter(tg=>tagGroup(tg)===g);
   const L = of('level'), E = of('entry'), R = of('refine');
   if(L.length!==1 || E.length!==1 || R.length>1) return null;
-  return { level:L[0], refine:R[0]||null, entry:E[0], id:[L[0], R[0], E[0]].filter(Boolean).join(' + ') };
+  return { level:L[0], refine:R[0]||null, entry:E[0], id:L[0]+' + '+E[0] };
 }
 function tradeR(t){ const r = parseJournal(t).r.exit; return (r===null || !isFinite(r)) ? null : r; }
 function comboStats(list){
@@ -1033,8 +1044,9 @@ function comboStats(list){
     if(r!==null) rs.push(r);
     const p = comboParts(t);
     if(!p){ skipped++; return; }
-    const c = combos[p.id] = combos[p.id] || { ...p, n:0, w:0, l:0, be:0, pnl:0, rs:[] };
+    const c = combos[p.id] = combos[p.id] || { id:p.id, level:p.level, entry:p.entry, n:0, w:0, l:0, be:0, pnl:0, rs:[], refined:0 };
     c.n++; c.pnl += tradePnl(t);
+    if(p.refine) c.refined++;
     const k = classify(t); if(k==='win') c.w++; else if(k==='loss') c.l++; else c.be++;
     if(r!==null) c.rs.push(r);
   });
@@ -1094,20 +1106,33 @@ function openComboSheet(id, opts){
     .sort((a,b)=> a.date===b.date ? (b.createdAt-a.createdAt) : (a.date<b.date?1:-1));
   const ctx = [
     ['Level', c.level, partStat(all,'level',c.level)],
-    ['Refine', c.refine || 'None', partStat(all,'refine',c.refine)],
     ['Entry', c.entry, partStat(all,'entry',c.entry)]
   ];
+  /* refined vs unrefined inside this combo */
+  const splitRows = [null, ...S.tags.filter(tg=>tagGroup(tg)==='refine')].map(ref=>{
+    const ts = trades.filter(t=>{ const p = comboParts(t); return (p.refine||null)===ref; });
+    const rs = ts.map(tradeR).filter(r=>r!==null);
+    const w = ts.filter(t=>classify(t)==='win').length, l = ts.filter(t=>classify(t)==='loss').length;
+    return { label: ref ? 'Refined '+ref : 'Not refined', n:ts.length, w, l, be:ts.length-w-l, nR:rs.length, avgR: rs.length ? rs.reduce((s,x)=>s+x,0)/rs.length : null };
+  }).filter(x=>x.n);
+  const cnt = (n, word) => n+' '+word+(n===1?'':'s');
   openSheet(`
-    <h3 style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${[c.level,c.refine,c.entry].filter(Boolean).map(tg=>`<span class="mini-tag sheet-tag" style="margin-right:0">${esc(tg)}</span>`).join('')}</h3>
-    <p class="desc" style="margin-bottom:4px">${c.n} trade${c.n===1?'':'s'} · ${c.w}W ${c.l}L ${c.be}BE${c.nR<c.n ? ' · '+c.nR+' with R' : ''}</p>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:1.25rem;font-weight:800;color:${rColor(c.adjR)};font-variant-numeric:tabular-nums">${c.nR ? fmtR(c.adjR) : '—'}</span>
-      <span style="font-size:.74rem;color:var(--ink-faint)">adjusted · raw ${fmtR(c.rawR)}</span>
-      ${c.verdict?`<span class="verdict ${c.verdict}">${c.verdict==='edge'?'Edge':'Leak'}</span>`:''}
+    <h3 style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span class="mini-tag sheet-tag" style="margin-right:0">${esc(c.level)}</span><span class="combo-plus" style="font-size:.9rem">+</span><span class="mini-tag sheet-tag" style="margin-right:0">${esc(c.entry)}</span></h3>
+    <p class="desc" style="margin-bottom:0">${cnt(c.n,'trade')} · ${c.w}W ${c.l}L ${c.be}BE${c.nR<c.n ? ' · '+c.nR+' with R' : ''}</p>
+    <div class="num-block">
+      <div class="big">
+        <b style="color:${rColor(c.adjR)}">${c.nR ? fmtR(c.adjR) : '—'}</b>
+        <span>estimated R per trade</span>
+        ${c.verdict?`<span class="verdict ${c.verdict}">${c.verdict==='edge'?'Edge':'Leak'}</span>`:''}
+      </div>
+      <p>This combo's own average: <b style="color:${rColor(c.rawR)}">${fmtR(c.rawR)}</b> from ${cnt(c.nR,'trade')}<br>
+      Your overall average: <b style="color:${rColor(cs.avgR)}">${fmtR(cs.avgR)}</b> from ${cnt(cs.withR,'trade')}</p>
     </div>
-    <div class="section-label" style="margin:14px 0 8px">Each part across all your trades</div>
-    <div class="ctx">${ctx.map(([lab,tg,st])=>`<div><small>${lab}</small><strong>${esc(tg)}</strong><em style="color:${rColor(st.avgR)}">${fmtR(st.avgR)}</em> <em style="color:var(--ink-faint)">· ${st.n}</em></div>`).join('')}</div>
-    <p class="ctx-base">Your average across every trade with R: <b style="color:${rColor(cs.avgR)}">${fmtR(cs.avgR)}</b> (${cs.withR} trades)</p>
+    ${splitRows.length ? `<div class="section-label" style="margin:14px 0 8px">Refined or not, in this combo</div>
+    <div class="split">${splitRows.map(x=>`<div><strong>${esc(x.label)}</strong><span>${cnt(x.n,'trade')} · ${x.w}W ${x.l}L ${x.be}BE</span><span class="r" style="color:${rColor(x.avgR)}">${fmtR(x.avgR)}</span></div>`).join('')}
+    <p style="font-size:.7rem;color:var(--ink-faint);margin-top:2px">Own averages with no adjustment. Only compare once each side has a real sample.</p></div>` : ''}
+    <div class="section-label" style="margin:0 0 8px">Each part across all your trades</div>
+    <div class="ctx" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px">${ctx.map(([lab,tg,st])=>`<div><small>${lab}</small><strong>${esc(tg)}</strong><em style="color:${rColor(st.avgR)}">${fmtR(st.avgR)}</em> <em style="color:var(--ink-faint)">· ${cnt(st.nR,'trade')} with R</em></div>`).join('')}</div>
     <div class="section-label" style="margin:0 0 8px">Trades</div>
     <div>${trades.map(t=>{ const pj = parseJournal(t); const r = tradeR(t); return tradeRowHTML(t, esc(relDay(t.date)) + (r!==null ? ' · '+fmtR(r) : pj.problem ? ' · <span style="color:var(--red)">check numbers</span>' : ' · no R')); }).join('')}</div>
   `, opts);
@@ -2018,7 +2043,11 @@ function groupBlock(list, keyFn){
 }
 const GROUP_ORDER = { level:0, refine:1, entry:2, other:3 };
 /* Combo name in Level + Refine + Entry order, e.g. "DL + 1R + 5mEng" */
-const comboKey = t => (t.tags&&t.tags.length) ? [[...t.tags].sort((a,b)=> (GROUP_ORDER[tagGroup(a)]-GROUP_ORDER[tagGroup(b)]) || a.localeCompare(b)).join(' + ')] : null;
+/* Combo = Level + Entry. Refinement is part of the level, so it doesn't split combos.
+   Trades with missing/doubled tags fall back to their full tag list so they stay visible. */
+const comboKey = t => { const p = comboParts(t); if(p) return [p.id];
+  return (t.tags&&t.tags.length) ? ['(tag error) '+[...t.tags].sort((a,b)=> (GROUP_ORDER[tagGroup(a)]-GROUP_ORDER[tagGroup(b)]) || a.localeCompare(b)).join(' + ')] : null; };
+const comboRefineKey = t => { const p = comboParts(t); return p ? [p.id+' · '+(p.refine||'not refined')] : null; };
 /* Broad groups, read from your tag names: M/W/D/4 prefix = timeframe, OC vs H/L = type, '>' = HTF>LTF engulf */
 function tradeGroups(t){
   const of = g => (t.tags||[]).filter(tg=>tagGroup(tg)===g);
@@ -2065,6 +2094,7 @@ function exportWeekly(){
     allTimeByGroup: groupedBlocks(S.trades),
     thisWeekByCombo: groupBlock(week, comboKey),
     allTimeByCombo: groupBlock(S.trades, comboKey),
+    allTimeByComboRefine: groupBlock(S.trades, comboRefineKey),
     thisWeekByDirection: groupBlock(week, t=>[t.direction]),
     allTimeByDirection: groupBlock(S.trades, t=>[t.direction]),
     trades: week.map(t=>({
