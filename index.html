@@ -142,6 +142,37 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .meter-fill i.w{background:var(--green)} .meter-fill i.l{background:var(--red)} .meter-fill i.b{background:#6b6250}
 .meter-n{font-size:.64rem;font-weight:700;color:var(--ink-faint);min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
 .meter-n.full{color:var(--gold-1)}
+/* Combos */
+.combo-cover{font-size:.72rem;color:var(--ink-faint);padding:2px 0 6px;line-height:1.45}
+.combo-cover b{color:var(--ink-dim);font-weight:700}
+.combo-top{display:flex;align-items:flex-start;gap:10px}
+.combo-tags{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:5px}
+.combo-tags .mini-tag.mini-tag{font-size:.7rem;padding:5px 9px}
+.combo-tags .mini-tag.soft{background:rgba(255,255,255,.06);color:var(--ink-dim)}
+.combo-adj{text-align:right;line-height:1.1;white-space:nowrap}
+.combo-adj b{display:block;font-size:.98rem;font-variant-numeric:tabular-nums}
+.combo-adj span{font-size:.62rem;color:var(--ink-faint);letter-spacing:.02em}
+.combo-mid{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.72rem;color:var(--ink-faint)}
+.combo-mid .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.verdict{font-size:.64rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.verdict.edge{background:rgba(58,217,142,.14);color:var(--green)}
+.verdict.leak{background:rgba(255,132,132,.14);color:var(--red)}
+.combo-more{width:100%;margin-top:6px;padding:11px;border-radius:10px;font-size:.78rem;font-weight:700;color:var(--gold-1);background:rgba(224,184,90,.08)}
+.combo-more:focus-visible,.card-toggle:focus-visible{outline:2px solid var(--gold-1);outline-offset:2px}
+.card-toggle{display:flex;width:100%;align-items:center;gap:10px;text-align:left;color:inherit}
+.card-toggle h3{font-size:1rem;color:var(--ink)}
+.card-toggle .sub{display:block;font-size:.74rem;color:var(--ink-faint);margin-top:2px}
+.card-toggle .chev{margin-left:auto;display:flex;color:var(--ink-faint);transition:transform .2s}
+.card-toggle .chev svg{width:18px;height:18px;stroke:currentColor}
+.card-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.bd-range{display:flex;justify-content:flex-end;margin:14px 0 6px}
+.ctx{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 8px}
+.ctx div{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:9px 10px;min-width:0}
+.ctx small{display:block;font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+.ctx strong{display:block;font-size:.78rem;color:var(--gold-1);margin:3px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx em{font-style:normal;font-size:.7rem;font-variant-numeric:tabular-nums}
+.ctx-base{font-size:.72rem;color:var(--ink-faint);margin:0 0 14px}
+@media (prefers-reduced-motion:reduce){.card-toggle .chev{transition:none}}
 .setup-note{font-size:.7rem;color:var(--ink-faint);line-height:1.5;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}
 @keyframes meterIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media (prefers-reduced-motion:reduce){.meter-fill{animation:none}}
@@ -649,6 +680,39 @@ function renderStats(){
   });
   const assetRows = Object.entries(byAsset).sort((a,b)=> b[1].pnl - a[1].pnl);
 
+  const SAMPLE_N = 30;
+  /* Combos card: all time on this account */
+  const combo = comboStats(S.trades.filter(t=>t.accountId===aid));
+  const COMBO_SHOW = 5;
+  const comboShown = UI.combosAll ? combo.rows : combo.rows.slice(0, COMBO_SHOW);
+  const comboRowHTML = c => {
+    const fillPct = Math.min(c.nR, SAMPLE_N)/SAMPLE_N*100;
+    const full = c.nR >= SAMPLE_N;
+    const seg = (cls, v) => v ? `<i class="${cls}" style="flex:${v}"></i>` : '';
+    return `<button class="setup-row" data-combo="${esc(c.id)}" aria-label="Show ${c.n} trades for ${esc(c.id)}">
+      <div class="combo-top">
+        <div class="combo-tags">
+          <span class="mini-tag">${esc(c.level)}</span>
+          ${c.refine?`<span class="mini-tag soft">${esc(c.refine)}</span>`:''}
+          <span class="mini-tag">${esc(c.entry)}</span>
+        </div>
+        <div class="combo-adj">
+          <b style="color:${rColor(c.adjR)}">${c.nR ? fmtR(c.adjR) : money(c.pnl,true)}</b>
+          <span>${c.nR ? 'adjusted' : 'no R yet'}</span>
+        </div>
+        <span class="setup-chev">${I.chevR}</span>
+      </div>
+      <div class="combo-mid">
+        <span class="grow">${c.n} trade${c.n===1?'':'s'} · <span class="${c.w?'w':''}" style="${c.w?'color:var(--green)':''}">${c.w}W</span> <span style="${c.l?'color:var(--red)':''}">${c.l}L</span> <span style="${c.be?'color:var(--ink-dim)':''}">${c.be}BE</span>${c.nR ? ' · raw '+fmtR(c.rawR) : ''}</span>
+        ${c.verdict ? `<span class="verdict ${c.verdict}">${c.verdict==='edge'?'Edge':'Leak'}</span>` : ''}
+      </div>
+      <div class="meter" role="img" aria-label="${c.w} wins, ${c.l} losses, ${c.be} breakeven. ${c.nR} of ${SAMPLE_N} trades with R">
+        <div class="meter-track"><div class="meter-fill" style="width:${fillPct}%">${seg('w',c.w)}${seg('l',c.l)}${seg('b',c.be)}</div></div>
+        <span class="meter-n ${full?'full':''}">${full ? c.nR : c.nR+'/'+SAMPLE_N}</span>
+      </div>
+    </button>`;
+  };
+
   /* By setup: one tab per tag group, month or all time */
   const setupRange = UI.setupRange || 'month';
   const setupList = setupRange==='all' ? S.trades.filter(t=>t.accountId===aid) : mt;
@@ -774,9 +838,23 @@ function renderStats(){
     }).join('') : `<div class="empty-chart">No trades taken this month.</div>`}
   </div>
 
+  <div class="card-navy" id="combo-card">
+    <div class="card-title"><h3>Combos</h3><span class="sub">All time</span></div>
+    ${combo.rows.length ? `
+      <p class="combo-cover"><b>${combo.withR}</b> of <b>${combo.total}</b> trades have R from your journal${combo.skipped ? ` · <b>${combo.skipped}</b> left out for missing or doubled tags` : ''}</p>
+      ${comboShown.map(comboRowHTML).join('')}
+      ${combo.rows.length > COMBO_SHOW ? `<button class="combo-more" data-combos-all>${UI.combosAll ? 'Show top '+COMBO_SHOW : 'Show all '+combo.rows.length+' combos'}</button>` : ''}
+      <p class="setup-note">Sorted by adjusted R per trade: combos with few trades are pulled toward your average of ${fmtR(combo.avgR)}, so one lucky trade can't top the list. Edge and Leak only appear once a combo's result is clearly above or below 0R.</p>`
+      : `<div class="empty-chart">${combo.total ? 'Tag trades with one level and one entry to see combos.' : 'No trades logged on this account yet.'}</div>`}
+  </div>
+
   <div class="card-navy" id="setup-card">
-    <div class="card-title">
-      <h3>By setup</h3>
+    <button class="card-toggle" data-bd-toggle aria-expanded="${!!UI.breakdownOpen}">
+      <span><h3>Breakdown</h3><span class="sub">Level, entry and refinement on their own</span></span>
+      <span class="chev">${I.chevR}</span>
+    </button>
+    ${UI.breakdownOpen ? `
+    <div class="bd-range">
       <div class="setup-range" role="group" aria-label="Time range">
         <button data-range="month" class="${setupRange==='month'?'on':''}" aria-pressed="${setupRange==='month'}">${MONTHS_S[m]} ${y}</button>
         <button data-range="all" class="${setupRange==='all'?'on':''}" aria-pressed="${setupRange==='all'}">All time</button>
@@ -792,6 +870,7 @@ function renderStats(){
         ? 'A trade can carry several of these, so rows can add up to more than the total.'
         : 'Each trade counts once, so rows add up to the total above. A bar fills at '+SAMPLE+' trades; until then, treat the row as an early hint.'}</p>`
       : `<div class="empty-chart">${setupRange==='all' ? 'No trades logged on this account yet.' : 'No trades this month. Switch to All time to see every trade.'}</div>`}
+    ` : ''}
   </div>
 
   <div class="card-navy">
@@ -806,8 +885,15 @@ function renderStats(){
 
   const acctSel = el.querySelector('#stats-acct');
   if(acctSel) acctSel.onchange = e => { UI.statsAccountId = e.target.value; renderStats(); };
+  const comboCard = el.querySelector('#combo-card');
+  if(comboCard) comboCard.onclick = e => {
+    if(e.target.closest('[data-combos-all]')){ UI.combosAll = !UI.combosAll; renderStats(); return; }
+    const row = e.target.closest('[data-combo]');
+    if(row) openComboSheet(row.dataset.combo);
+  };
   const setupCard = el.querySelector('#setup-card');
   if(setupCard) setupCard.onclick = e => {
+    if(e.target.closest('[data-bd-toggle]')){ UI.breakdownOpen = !UI.breakdownOpen; renderStats(); return; }
     const r = e.target.closest('[data-range]'); if(r){ UI.setupRange = r.dataset.range; renderStats(); return; }
     const g = e.target.closest('[data-sgroup]'); if(g){ UI.setupGroup = g.dataset.sgroup; renderStats(); return; }
     const row = e.target.closest('.setup-row');
@@ -912,6 +998,92 @@ const calcExpr = f => f.entries.map((e,i)=>{
   if(i===0) return (e.sign<0?'−':'') + num;
   return (e.sign<0?' − ':' + ') + num;
 }).join('');
+
+/* ---------- Combos: Level + Refine + Entry, ranked by adjusted R ---------- */
+const COMBO_K = 10;     /* trades of "pull" toward your overall average */
+const COMBO_Z = 2.5;    /* strictness for Edge / Leak (stricter than 2 because many combos are checked) */
+const COMBO_MIN = 10;   /* no verdict below this many trades with R */
+const fmtR = v => v===null || !isFinite(v) ? '—' : (v>0?'+':v<0?'−':'') + Math.abs(v).toFixed(2) + 'R';
+const rColor = v => v===null ? 'var(--ink-dim)' : v>0.005 ? 'var(--green)' : v<-0.005 ? 'var(--red)' : 'var(--ink-dim)';
+function comboParts(t){
+  const of = g => (t.tags||[]).filter(tg=>tagGroup(tg)===g);
+  const L = of('level'), E = of('entry'), R = of('refine');
+  if(L.length!==1 || E.length!==1 || R.length>1) return null;
+  return { level:L[0], refine:R[0]||null, entry:E[0], id:[L[0], R[0], E[0]].filter(Boolean).join(' + ') };
+}
+function tradeR(t){ const r = parseJournal(t).r.exit; return (r===null || !isFinite(r)) ? null : r; }
+function comboStats(list){
+  const rs = []; const combos = {}; let skipped = 0;
+  list.forEach(t=>{
+    const r = tradeR(t);
+    if(r!==null) rs.push(r);
+    const p = comboParts(t);
+    if(!p){ skipped++; return; }
+    const c = combos[p.id] = combos[p.id] || { ...p, n:0, w:0, l:0, be:0, pnl:0, rs:[] };
+    c.n++; c.pnl += tradePnl(t);
+    const k = classify(t); if(k==='win') c.w++; else if(k==='loss') c.l++; else c.be++;
+    if(r!==null) c.rs.push(r);
+  });
+  const mean = a => a.reduce((s,x)=>s+x,0)/a.length;
+  const g = rs.length ? mean(rs) : 0;
+  const sd = rs.length>1 ? Math.sqrt(rs.reduce((s,x)=>s+(x-g)*(x-g),0)/(rs.length-1)) : 1;
+  const rows = Object.values(combos).map(c=>{
+    c.nR = c.rs.length;
+    c.rawR = c.nR ? mean(c.rs) : null;
+    c.adjR = c.nR ? (c.nR*c.rawR + COMBO_K*g)/(c.nR + COMBO_K) : null;
+    const se = (sd||1)/Math.sqrt(c.nR||1);
+    c.verdict = c.nR>=COMBO_MIN ? (c.rawR - COMBO_Z*se > 0 ? 'edge' : (c.rawR + COMBO_Z*se < 0 ? 'leak' : null)) : null;
+    return c;
+  }).sort((a,b)=> (a.adjR===null) - (b.adjR===null) || (b.adjR??0) - (a.adjR??0) || b.n - a.n);
+  return { rows, avgR:g, withR:rs.length, total:list.length, skipped };
+}
+/* How one part of a combo does across all your trades */
+function partStat(list, group, key){
+  const match = list.filter(t=>{
+    const inG = (t.tags||[]).filter(tg=>tagGroup(tg)===group);
+    return key===null ? inG.length===0 : inG.includes(key);
+  });
+  const rs = match.map(tradeR).filter(r=>r!==null);
+  return { n:match.length, nR:rs.length, avgR: rs.length ? rs.reduce((s,x)=>s+x,0)/rs.length : null };
+}
+function openComboSheet(id, opts){
+  const aid = UI.statsAccountId;
+  const all = S.trades.filter(t=>t.accountId===aid);
+  const cs = comboStats(all);
+  const c = cs.rows.find(x=>x.id===id);
+  if(!c) return false;
+  const trades = all.filter(t=>{ const p = comboParts(t); return p && p.id===id; })
+    .sort((a,b)=> a.date===b.date ? (b.createdAt-a.createdAt) : (a.date<b.date?1:-1));
+  const ctx = [
+    ['Level', c.level, partStat(all,'level',c.level)],
+    ['Refine', c.refine || 'None', partStat(all,'refine',c.refine)],
+    ['Entry', c.entry, partStat(all,'entry',c.entry)]
+  ];
+  openSheet(`
+    <h3 style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${[c.level,c.refine,c.entry].filter(Boolean).map(tg=>`<span class="mini-tag sheet-tag" style="margin-right:0">${esc(tg)}</span>`).join('')}</h3>
+    <p class="desc" style="margin-bottom:4px">${c.n} trade${c.n===1?'':'s'} · ${c.w}W ${c.l}L ${c.be}BE${c.nR<c.n ? ' · '+c.nR+' with R' : ''}</p>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:1.25rem;font-weight:800;color:${rColor(c.adjR)};font-variant-numeric:tabular-nums">${c.nR ? fmtR(c.adjR) : '—'}</span>
+      <span style="font-size:.74rem;color:var(--ink-faint)">adjusted · raw ${fmtR(c.rawR)}</span>
+      ${c.verdict?`<span class="verdict ${c.verdict}">${c.verdict==='edge'?'Edge':'Leak'}</span>`:''}
+    </div>
+    <div class="section-label" style="margin:14px 0 8px">Each part across all your trades</div>
+    <div class="ctx">${ctx.map(([lab,tg,st])=>`<div><small>${lab}</small><strong>${esc(tg)}</strong><em style="color:${rColor(st.avgR)}">${fmtR(st.avgR)}</em> <em style="color:var(--ink-faint)">· ${st.n}</em></div>`).join('')}</div>
+    <p class="ctx-base">Your average across every trade with R: <b style="color:${rColor(cs.avgR)}">${fmtR(cs.avgR)}</b> (${cs.withR} trades)</p>
+    <div class="section-label" style="margin:0 0 8px">Trades</div>
+    <div>${trades.map(t=>{ const r = tradeR(t); return tradeRowHTML(t, esc(relDay(t.date)) + (r!==null ? ' · '+fmtR(r) : ' · no R')); }).join('')}</div>
+  `, opts);
+  sheetEl.querySelectorAll('.trade-row').forEach(row=> row.onclick = ()=>{
+    const t = S.trades.find(x=>x.id===row.dataset.id); if(!t) return;
+    const keep = window.scrollY, listScroll = sheetEl.scrollTop;
+    UI.form = formFromTrade(t);
+    UI.returnTo = 'stats';
+    UI.returnScroll = keep;
+    UI.editBack = true;
+    leaveSheetFor('add', ()=>{ const ok = openComboSheet(id, {noPush:true}); if(ok) sheetEl.scrollTop = listScroll; return ok; });
+  });
+  return true;
+}
 
 /* Does a trade belong in a By setup row? none=true means "has no tag in this group" */
 function setupMatch(t, group, key, none){
