@@ -145,6 +145,13 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 /* Combos */
 .combo-cover{font-size:.72rem;color:var(--ink-faint);padding:2px 0 6px;line-height:1.45}
 .combo-cover b{color:var(--ink-dim);font-weight:700}
+.fix-banner{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:4px 0 8px;padding:11px 12px;border-radius:10px;background:rgba(255,132,132,.08);border:1px solid rgba(255,132,132,.22);color:var(--ink-dim);font-size:.74rem;line-height:1.45}
+.fix-banner b{color:var(--red)}
+.fix-cta{margin-left:auto;display:flex;align-items:center;gap:2px;white-space:nowrap;font-weight:700;color:var(--red)}
+.fix-cta svg{width:14px;height:14px;stroke:currentColor}
+.fix-banner:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.fix-item{margin-bottom:6px}
+.fix-why{font-size:.74rem;color:var(--red);line-height:1.45;margin:0 2px 6px}
 .combo-top{display:flex;align-items:flex-start;gap:10px}
 .combo-tags{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:5px}
 .combo-tags .mini-tag.mini-tag{font-size:.7rem;padding:5px 9px}
@@ -842,6 +849,10 @@ function renderStats(){
     <div class="card-title"><h3>Combos</h3><span class="sub">All time</span></div>
     ${combo.rows.length ? `
       <p class="combo-cover"><b>${combo.withR}</b> of <b>${combo.total}</b> trades have R from your journal${combo.skipped ? ` · <b>${combo.skipped}</b> left out for missing or doubled tags` : ''}</p>
+      ${combo.needsFix.length ? `<button class="fix-banner" data-fix-list>
+        <span><b>${combo.needsFix.length} trade${combo.needsFix.length===1?'':'s'}</b> ${combo.needsFix.length===1?'has':'have'} journal numbers that don't add up, so ${combo.needsFix.length===1?'it is':'they are'} left out of R.</span>
+        <span class="fix-cta">Review ${I.chevR}</span>
+      </button>` : ''}
       ${comboShown.map(comboRowHTML).join('')}
       ${combo.rows.length > COMBO_SHOW ? `<button class="combo-more" data-combos-all>${UI.combosAll ? 'Show top '+COMBO_SHOW : 'Show all '+combo.rows.length+' combos'}</button>` : ''}
       <p class="setup-note">Sorted by adjusted R per trade: combos with few trades are pulled toward your average of ${fmtR(combo.avgR)}, so one lucky trade can't top the list. Edge and Leak only appear once a combo's result is clearly above or below 0R.</p>`
@@ -888,6 +899,7 @@ function renderStats(){
   const comboCard = el.querySelector('#combo-card');
   if(comboCard) comboCard.onclick = e => {
     if(e.target.closest('[data-combos-all]')){ UI.combosAll = !UI.combosAll; renderStats(); return; }
+    if(e.target.closest('[data-fix-list]')){ openFixSheet(); return; }
     const row = e.target.closest('[data-combo]');
     if(row) openComboSheet(row.dataset.combo);
   };
@@ -1013,9 +1025,11 @@ function comboParts(t){
 }
 function tradeR(t){ const r = parseJournal(t).r.exit; return (r===null || !isFinite(r)) ? null : r; }
 function comboStats(list){
-  const rs = []; const combos = {}; let skipped = 0;
+  const rs = []; const combos = {}; let skipped = 0; const needsFix = [];
   list.forEach(t=>{
-    const r = tradeR(t);
+    const pj = parseJournal(t);
+    if(pj.problem) needsFix.push(t);
+    const r = (pj.r.exit===null || !isFinite(pj.r.exit)) ? null : pj.r.exit;
     if(r!==null) rs.push(r);
     const p = comboParts(t);
     if(!p){ skipped++; return; }
@@ -1035,7 +1049,7 @@ function comboStats(list){
     c.verdict = c.nR>=COMBO_MIN ? (c.rawR - COMBO_Z*se > 0 ? 'edge' : (c.rawR + COMBO_Z*se < 0 ? 'leak' : null)) : null;
     return c;
   }).sort((a,b)=> (a.adjR===null) - (b.adjR===null) || (b.adjR??0) - (a.adjR??0) || b.n - a.n);
-  return { rows, avgR:g, withR:rs.length, total:list.length, skipped };
+  return { rows, avgR:g, withR:rs.length, total:list.length, skipped, needsFix };
 }
 /* How one part of a combo does across all your trades */
 function partStat(list, group, key){
@@ -1045,6 +1059,30 @@ function partStat(list, group, key){
   });
   const rs = match.map(tradeR).filter(r=>r!==null);
   return { n:match.length, nR:rs.length, avgR: rs.length ? rs.reduce((s,x)=>s+x,0)/rs.length : null };
+}
+function openFixSheet(opts){
+  const aid = UI.statsAccountId;
+  const list = S.trades.filter(t=>t.accountId===aid && parseJournal(t).problem)
+    .sort((a,b)=> a.date===b.date ? (b.createdAt-a.createdAt) : (a.date<b.date?1:-1));
+  if(!list.length) return false;
+  openSheet(`
+    <h3>Journal numbers to check</h3>
+    <p class="desc">These trades are left out of R until the Plan and Result lines add up. Tap one to fix it.</p>
+    ${list.map(t=>`<div class="fix-item">
+      <p class="fix-why">${esc(parseJournal(t).problem)}.</p>
+      ${tradeRowHTML(t, esc(relDay(t.date)))}
+    </div>`).join('')}
+  `, opts);
+  sheetEl.querySelectorAll('.trade-row').forEach(row=> row.onclick = ()=>{
+    const t = S.trades.find(x=>x.id===row.dataset.id); if(!t) return;
+    const keep = window.scrollY;
+    UI.form = formFromTrade(t);
+    UI.returnTo = 'stats';
+    UI.returnScroll = keep;
+    UI.editBack = true;
+    leaveSheetFor('add', ()=> openFixSheet({noPush:true}));
+  });
+  return true;
 }
 function openComboSheet(id, opts){
   const aid = UI.statsAccountId;
@@ -1071,7 +1109,7 @@ function openComboSheet(id, opts){
     <div class="ctx">${ctx.map(([lab,tg,st])=>`<div><small>${lab}</small><strong>${esc(tg)}</strong><em style="color:${rColor(st.avgR)}">${fmtR(st.avgR)}</em> <em style="color:var(--ink-faint)">· ${st.n}</em></div>`).join('')}</div>
     <p class="ctx-base">Your average across every trade with R: <b style="color:${rColor(cs.avgR)}">${fmtR(cs.avgR)}</b> (${cs.withR} trades)</p>
     <div class="section-label" style="margin:0 0 8px">Trades</div>
-    <div>${trades.map(t=>{ const r = tradeR(t); return tradeRowHTML(t, esc(relDay(t.date)) + (r!==null ? ' · '+fmtR(r) : ' · no R')); }).join('')}</div>
+    <div>${trades.map(t=>{ const pj = parseJournal(t); const r = tradeR(t); return tradeRowHTML(t, esc(relDay(t.date)) + (r!==null ? ' · '+fmtR(r) : pj.problem ? ' · <span style="color:var(--red)">check numbers</span>' : ' · no R')); }).join('')}</div>
   `, opts);
   sheetEl.querySelectorAll('.trade-row').forEach(row=> row.onclick = ()=>{
     const t = S.trades.find(x=>x.id===row.dataset.id); if(!t) return;
@@ -1858,7 +1896,8 @@ const numOr = (m, i=1) => m ? parseFloat(m[i]) : null;
 function parseJournal(t){
   const notes = t.notes || '';
   const warn = [];
-  const P = lineOf(notes,'(?:Plan|P)'), E = lineOf(notes,'(?:Result|E)'), AfterL = lineOf(notes,'(?:After|Post)');
+  const unComma = x => x===null ? null : x.replace(/(\d),(?=\d{3}\b)/g, '$1');
+  const P = unComma(lineOf(notes,'(?:Plan|P)')), E = unComma(lineOf(notes,'(?:Result|E)')), AfterL = lineOf(notes,'(?:After|Post)');
   let entry=null, slPips=null, tpPips=null;
   if(P){
     slPips = numOr(P.match(/SL\s*(\d+(?:\.\d+)?)/i));
@@ -1873,7 +1912,7 @@ function parseJournal(t){
     bestPips = numOr(E.match(/Best\s*\+?\s*(\d+(?:\.\d+)?)/i));
     const w = numOr(E.match(/Worst\s*-?\s*(\d+(?:\.\d+)?)/i));
     worstPips = w===null ? null : -Math.abs(w);
-    exitPrice = numOr(E.match(/out\s*@?\s*(\d+(?:\.\d+)?)/i));
+    exitPrice = numOr(E.match(/\bout\s*@?\s*(\d{3,}(?:\.\d+)?)/i));
     beAtPips = numOr(E.match(/BE\s*@\s*(\d+(?:\.\d+)?)/i));
     if(bestPips===null) warn.push('Result: no Best');
     if(worstPips===null) warn.push('Result: no Worst');
@@ -1888,7 +1927,19 @@ function parseJournal(t){
   const dir = t.direction==='sell' ? -1 : 1;
   const r2 = n => n===null||!isFinite(n) ? null : Math.round(n*100)/100;
   const exitPips = (pip && entry!==null && exitPrice!==null) ? r2((exitPrice-entry)*dir/pip) : null;
-  const hasSL = slPips!==null && slPips>0;
+  let problem = null;
+  const shortOut = (E && exitPrice===null) ? E.match(/\bout\s*@?\s*(\d{1,2}(?:\.\d+)?)\b/i) : null;
+  if(shortOut) problem = '"out '+shortOut[1]+'" isn\'t a price. Write the exit price, e.g. out4307.5';
+  else if(slPips!==null && slPips>=1000) problem = 'SL '+slPips+' looks like a price. Write the stop in pips, e.g. SL30';
+  else if(entry!==null && exitPrice!==null && Math.abs(exitPrice-entry)/entry > 0.05)
+    problem = 'Entry '+entry+' and exit '+exitPrice+' are too far apart. Check both prices for a typo';
+  else if(exitPips!==null && bestPips!==null && worstPips!==null && slPips){
+    const tol = Math.max(5, slPips*0.15);
+    if(exitPips > bestPips + tol || exitPips < worstPips - tol)
+      problem = 'Exit works out to '+(exitPips>0?'+':'')+exitPips+' pips, outside Best+'+bestPips+' / Worst'+worstPips+'. Check the entry, exit and direction';
+  }
+  if(problem) warn.push(problem);
+  const hasSL = slPips!==null && slPips>0 && !problem;
   const layered = (t.layers||[]).length>1;
   if(layered && exitPips!==null) warn.push('layered: exitR covers the Plan entry only');
   return {
@@ -1903,6 +1954,7 @@ function parseJournal(t){
       beTrigger: hasSL && beAtPips!==null ? r2(beAtPips/slPips) : null
     },
     stopOver100: slPips!==null ? slPips>100 : null,
+    problem,
     warnings: warn
   };
 }
