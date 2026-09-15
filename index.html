@@ -258,14 +258,15 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:40;display:flex;justify-conte
 /* ---------- sheet / modal ---------- */
 .sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);z-index:60;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}
 .sheet-backdrop.open{opacity:1;pointer-events:auto}
-.sheet{width:100%;max-width:480px;background:linear-gradient(170deg,#241e12,#171208);border-top:1px solid var(--gold-line);border-radius:18px 18px 0 0;padding:22px 20px calc(26px + env(safe-area-inset-bottom));transform:translateY(30px);transition:transform .2s;color:var(--ink);max-height:calc(100vh - env(safe-area-inset-top) - 24px);max-height:calc(100dvh - env(safe-area-inset-top) - 24px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.sheet{width:100%;max-width:480px;background:linear-gradient(170deg,#241e12,#171208);border-top:1px solid var(--gold-line);border-radius:18px 18px 0 0;padding:0 20px calc(26px + env(safe-area-inset-bottom));transform:translateY(30px);transition:transform .22s cubic-bezier(.2,.7,.2,1);color:var(--ink);max-height:calc(100vh - env(safe-area-inset-top) - 24px);max-height:calc(100dvh - env(safe-area-inset-top) - 24px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .sheet-backdrop.open .sheet{transform:translateY(0)}
 .sheet h3{font-size:1.1rem;margin-bottom:4px;color:var(--ink)}
 .sheet .desc{font-size:.82rem;color:var(--ink-dim);margin-bottom:16px;line-height:1.45}
 .sheet .field{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);margin-bottom:12px}
 .sheet .seg{margin-bottom:12px}
 .sheet .seg button{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
-.grab{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:0 auto 16px}
+.grab{position:sticky;top:0;z-index:3;margin:0 -20px 6px;padding:10px 0 14px;background:#241e12;touch-action:none;cursor:grab}
+.grab::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.22);margin:0 auto}
 
 /* toast */
 #toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 20px);transform:translateX(-50%) translateY(8px);background:#241d10;border:1px solid var(--gold-line);color:var(--ink);padding:11px 20px;border-radius:var(--r-sm);font-size:.85rem;font-weight:600;opacity:0;transition:all .2s;z-index:80;pointer-events:none;box-shadow:0 10px 26px -8px rgba(0,0,0,.8);white-space:nowrap}
@@ -573,7 +574,7 @@ function renderCalendar(){
   el.querySelectorAll('[data-day]').forEach(b=> b.onclick = ()=> openDaySheet(b.dataset.day));
 }
 
-function openDaySheet(iso){
+function openDaySheet(iso, opts){
   const aid = UI.statsAccountId;
   const trades = S.trades.filter(t=>t.accountId===aid && t.date===iso).sort((a,b)=>b.createdAt-a.createdAt);
   const dayPnl = trades.reduce((s,t)=>s+tradePnl(t),0);
@@ -597,13 +598,15 @@ function openDaySheet(iso){
       </button>`;
     }).join('')}
     </div>
-  `);
+  `, opts);
   sheetEl.querySelectorAll('.trade-row').forEach(r=> r.onclick = ()=>{
     const t = S.trades.find(x=>x.id===r.dataset.id); if(!t) return;
-    closeSheet();
+    const keep = window.scrollY, listScroll = sheetEl.scrollTop;
     UI.form = formFromTrade(t);
     UI.returnTo = 'calendar';
-    nav('add');
+    UI.returnScroll = keep;
+    UI.editBack = true;
+    leaveSheetFor('add', ()=>{ if(!S.trades.some(x=>x.accountId===UI.statsAccountId && x.date===iso)) return false; openDaySheet(iso, {noPush:true}); sheetEl.scrollTop = listScroll; return true; });
   });
 }
 
@@ -930,12 +933,12 @@ function tradeRowHTML(t, meta){
     ${I.chevR}
   </button>`;
 }
-function openSetupSheet(sel){
+function openSetupSheet(sel, opts){
   const aid = UI.statsAccountId, y = UI.statsY, m = UI.statsM;
   const pool = sel.range==='all' ? S.trades.filter(t=>t.accountId===aid) : monthTrades(aid, y, m);
   const trades = pool.filter(t=>setupMatch(t, sel.group, sel.key, sel.none))
     .sort((a,b)=> a.date===b.date ? (b.createdAt-a.createdAt) : (a.date<b.date?1:-1));
-  if(!trades.length) return;
+  if(!trades.length) return false;
   const w = trades.filter(t=>classify(t)==='win').length, l = trades.filter(t=>classify(t)==='loss').length, be = trades.length-w-l;
   const pnl = trades.reduce((s,t)=>s+tradePnl(t),0);
   const label = sel.none ? ({level:'No level', entry:'No entry', refine:'No refinement'}[sel.group]) : sel.key;
@@ -943,17 +946,17 @@ function openSetupSheet(sel){
     <h3><span class="mini-tag sheet-tag" ${sel.none?'style="background:transparent;border:1px dashed rgba(255,255,255,.18);color:var(--ink-dim)"':''}>${esc(label)}</span><span class="sheet-range">${sel.range==='all'?'All time':MONTHS_S[m]+' '+y}</span></h3>
     <p class="desc">${trades.length} trade${trades.length===1?'':'s'} · ${w}W ${l}L ${be}BE · <b style="color:${pnl>0?'var(--green)':pnl<0?'var(--red)':'inherit'}">${money(pnl,true)}</b></p>
     <div>${trades.map(t=> tradeRowHTML(t, esc(relDay(t.date)) + (t.layers.length>1?' · '+t.layers.length+' layers':''))).join('')}</div>
-  `);
+  `, opts);
   sheetEl.querySelectorAll('.trade-row').forEach(r=> r.onclick = ()=>{
     const t = S.trades.find(x=>x.id===r.dataset.id); if(!t) return;
-    const keep = window.scrollY;
-    closeSheet();
+    const keep = window.scrollY, listScroll = sheetEl.scrollTop;
     UI.form = formFromTrade(t);
     UI.returnTo = 'stats';
     UI.returnScroll = keep;
-    UI.reopenSetup = sel;
-    nav('add');
+    UI.editBack = true;
+    leaveSheetFor('add', ()=>{ const ok = openSetupSheet(sel, {noPush:true}); if(ok) sheetEl.scrollTop = listScroll; return ok; });
   });
+  return true;
 }
 
 function tagPickerHTML(f){
@@ -1115,7 +1118,7 @@ function renderAdd(){
   if(delBtn) delBtn.onclick = ()=> confirmSheet('Delete this trade?','This removes it from your journal and stats. This can\'t be undone.',()=>{
     const dest = UI.returnTo||'history';
     S.trades = S.trades.filter(t=>t.id!==f.editingId); save(); UI.form=null; UI.returnTo=null; toast('Trade deleted');
-    history.replaceState({tab:dest}, '', '#'+dest); nav(dest, true);
+    leaveEdit(dest);
   });
 }
 function saveTrade(){
@@ -1141,6 +1144,13 @@ function saveTrade(){
   if(f.editingId){ const i = S.trades.findIndex(t=>t.id===f.editingId); S.trades[i] = trade; toast('Trade updated'); }
   else { S.trades.push(trade); toast('Trade saved · ' + money(tradePnl(trade),true)); }
   save(); UI.form = null; UI.returnTo = null;
+  leaveEdit(dest);
+}
+/* Opened from a list: step Back so the list (and its sheet) come back in place.
+   New trade: replace the Add step with the destination tab. */
+function leaveEdit(dest){
+  if(UI.editBack && UI.tab==='add'){ UI.editBack = false; history.back(); return; }
+  UI.editBack = false;
   history.replaceState({tab:dest}, '', '#'+dest); nav(dest, true);
 }
 
@@ -1220,6 +1230,7 @@ function renderHistory(){
     UI.form = formFromTrade(t);
     UI.returnTo = 'history';
     UI.returnScroll = window.scrollY;
+    UI.editBack = true;
     nav('add');
   });
 }
@@ -1390,19 +1401,82 @@ Lesson: </pre>
    ============================================================ */
 const backdrop = document.getElementById('sheet-backdrop');
 const sheetEl = document.getElementById('sheet');
-function openSheet(html){
-  sheetEl.innerHTML = '<div class="grab"></div>'+html;
+/* Back-button model
+   - Opening a sheet adds one history step ({tab, sheet:1}).
+   - Closing it any way (back, swipe, tap outside, a button) removes that step with history.back().
+     Anything that must happen after closing (opening another sheet, changing tab) is passed
+     to closeSheet(then) and runs once the step is gone, so history never gets out of order.
+   - Opening a trade from a sheet keeps the sheet's step underneath. Coming back re-opens the
+     sheet on that same step (reopen with noPush) instead of adding a new one. */
+let sheetClosing = false, afterSheetClose = null;
+function openSheet(html, opts){
+  sheetEl.innerHTML = '<div class="grab" aria-hidden="true"></div>'+html;
+  sheetEl.scrollTop = 0;
+  sheetEl.style.transform = '';
   backdrop.classList.add('open');
-  history.pushState({tab:UI.tab, sheet:1}, '');
+  if(!(opts && opts.noPush)) history.pushState({tab:UI.tab, sheet:1}, '', '#'+UI.tab);
 }
 function domCloseSheet(){ backdrop.classList.remove('open'); }
-function closeSheet(){
+function closeSheet(then){
+  if(sheetClosing) return;
+  const fn = typeof then === 'function' ? then : null;
   domCloseSheet();
-  /* replace (not pop) the sheet's history entry so a nav() right after
-     closing isn't overridden by an async history.back() */
-  if(history.state && history.state.sheet) history.replaceState({tab:UI.tab}, '', '#'+UI.tab);
+  if(history.state && history.state.sheet){
+    sheetClosing = true; afterSheetClose = fn;
+    history.back();
+  } else if(fn) fn();
+}
+/* Leave a sheet for another screen, keeping the sheet's history step so Back returns to it */
+function leaveSheetFor(tab, reopen){
+  domCloseSheet();
+  UI.reopen = reopen || null;
+  nav(tab);
 }
 backdrop.addEventListener('click', e=>{ if(e.target===backdrop) closeSheet(); });
+
+/* Swipe down to close. Drags from the handle always work; drags on the content work
+   when the list is scrolled to the top, so scrolling a long list still scrolls. */
+(function(){
+  let startY = null, lastY = 0, lastT = 0, dy = 0, vel = 0, dragging = false, fromGrab = false;
+  sheetEl.addEventListener('touchstart', e=>{
+    if(!backdrop.classList.contains('open') || e.touches.length !== 1){ startY = null; return; }
+    fromGrab = !!e.target.closest('.grab');
+    if(!fromGrab && sheetEl.scrollTop > 0){ startY = null; return; }
+    startY = lastY = e.touches[0].clientY; lastT = e.timeStamp; dy = 0; vel = 0; dragging = false;
+  }, {passive:true});
+  sheetEl.addEventListener('touchmove', e=>{
+    if(startY === null) return;
+    const y = e.touches[0].clientY, d = y - startY;
+    if(!dragging){
+      if(d > 6 && (fromGrab || sheetEl.scrollTop <= 0)){ dragging = true; sheetEl.style.transition = 'none'; }
+      else if(d < -6 && !fromGrab){ startY = null; return; }
+      else return;
+    }
+    e.preventDefault();
+    dy = Math.max(0, d);
+    const dt = Math.max(1, e.timeStamp - lastT);
+    vel = (y - lastY) / dt; lastY = y; lastT = e.timeStamp;
+    sheetEl.style.transform = 'translateY(' + dy + 'px)';
+    backdrop.style.opacity = String(Math.max(.35, 1 - dy / (sheetEl.offsetHeight * 1.2)));
+  }, {passive:false});
+  const end = ()=>{
+    if(startY === null) return;
+    startY = null;
+    if(!dragging) return;
+    dragging = false;
+    sheetEl.style.transition = '';
+    backdrop.style.opacity = '';
+    if(dy > Math.min(120, sheetEl.offsetHeight * .25) || vel > .5){
+      sheetEl.style.transform = 'translateY(100%)';
+      closeSheet();
+      setTimeout(()=>{ sheetEl.style.transform = ''; }, 260);
+    } else {
+      sheetEl.style.transform = '';
+    }
+  };
+  sheetEl.addEventListener('touchend', end);
+  sheetEl.addEventListener('touchcancel', end);
+})();
 
 function openAccountSheet(editId){
   const a = editId ? acct(editId) : null;
@@ -1428,7 +1502,7 @@ function openAccountSheet(editId){
       if(!S.settings.defaultAccountId) S.settings.defaultAccountId = acc.id;
       toast('Account created');
     }
-    save(); closeSheet(); render();
+    save(); closeSheet(render);
   };
   setTimeout(()=>document.getElementById('sh-name').focus(),100);
 }
@@ -1448,7 +1522,7 @@ function openTxnSheet(aid, kind){
     const amt = parseFloat(document.getElementById('sh-amt').value);
     if(!amt || amt<=0) return toast('Enter an amount');
     S.txns.push({id:uid(), accountId:aid, amount: isDep?amt:-amt, kind, date:document.getElementById('sh-date').value||todayISO(), createdAt:Date.now()});
-    save(); closeSheet(); toast((isDep?'Deposited ':'Withdrew ')+money(amt)); render();
+    save(); toast((isDep?'Deposited ':'Withdrew ')+money(amt)); closeSheet(render);
   };
   setTimeout(()=>document.getElementById('sh-amt').focus(),100);
 }
@@ -1469,9 +1543,9 @@ function openTagSheet(onDone, group){
     const existing = S.tags.find(x=>x.toLowerCase()===tg.toLowerCase());
     if(!S.tagGroups) S.tagGroups = {};
     if(!existing){ S.tags.push(tg); S.tagGroups[tg] = g; }
-    save(); closeSheet();
+    save();
     toast(existing ? existing+' already exists in '+GROUP_LABEL[tagGroup(existing)] : tg+' added to '+GROUP_LABEL[g]);
-    if(onDone) onDone(existing||tg);
+    closeSheet(()=>{ if(onDone) onDone(existing||tg); });
   };
   setTimeout(()=>document.getElementById('sh-tag').focus(),100);
 }
@@ -1488,9 +1562,8 @@ function openTagGroupSheet(tg){
   document.getElementById('sh-groups').onclick = e=>{
     const b = e.target.closest('[data-g]'); if(!b) return;
     if(!S.tagGroups) S.tagGroups = {};
-    S.tagGroups[tg] = b.dataset.g; save(); closeSheet();
+    S.tagGroups[tg] = b.dataset.g; save(); closeSheet(()=>{ if(UI.tab==='settings') renderSettings(); });
     toast(tg+' is now in '+GROUP_LABEL[b.dataset.g]);
-    if(UI.tab==='settings') renderSettings();
   };
 }
 
@@ -1503,8 +1576,8 @@ function askSheet(title, desc, yesLabel, onYes){
       <button class="btn-soft" id="sh-yes" style="background:linear-gradient(150deg,var(--gold-1),var(--gold-2));color:#1c1506">${esc(yesLabel)}</button>
     </div>
   `);
-  document.getElementById('sh-no').onclick = closeSheet;
-  document.getElementById('sh-yes').onclick = ()=>{ closeSheet(); onYes(); };
+  document.getElementById('sh-no').onclick = ()=> closeSheet();
+  document.getElementById('sh-yes').onclick = ()=> closeSheet(onYes);
 }
 
 function openAssetSheet(onDone){
@@ -1520,8 +1593,8 @@ function openAssetSheet(onDone){
     const existing = S.assets.find(x=>x.toUpperCase()===sym);
     if(!existing) S.assets.push(sym);
     if(!S.settings.defaultAsset) S.settings.defaultAsset = existing||sym;
-    save(); closeSheet(); toast(existing ? existing+' already exists — selected' : sym+' added');
-    if(onDone) onDone(existing||sym);
+    save(); toast(existing ? existing+' already exists — selected' : sym+' added');
+    closeSheet(()=>{ if(onDone) onDone(existing||sym); });
   };
   setTimeout(()=>document.getElementById('sh-sym').focus(),100);
 }
@@ -1551,7 +1624,7 @@ Lesson: </pre>
     <p class="desc" style="margin-top:6px">One tag per group. Sort your tags into groups in Settings.</p>
     <button class="btn-primary" id="sh-ok" style="margin-top:8px">${I.check}Got it</button>
   `);
-  document.getElementById('sh-ok').onclick = closeSheet;
+  document.getElementById('sh-ok').onclick = ()=> closeSheet();
 }
 
 function confirmSheet(title, desc, onYes){
@@ -1563,8 +1636,8 @@ function confirmSheet(title, desc, onYes){
       <button class="btn-soft" id="sh-yes" style="background:var(--red-deep);color:#fff">Delete</button>
     </div>
   `);
-  document.getElementById('sh-no').onclick = closeSheet;
-  document.getElementById('sh-yes').onclick = ()=>{ closeSheet(); onYes(); };
+  document.getElementById('sh-no').onclick = ()=> closeSheet();
+  document.getElementById('sh-yes').onclick = ()=> closeSheet(onYes);
 }
 
 /* ============================================================
@@ -1829,10 +1902,9 @@ function nav(tab, fromPop){
   document.querySelectorAll('.nav-item').forEach(b=> b.classList.toggle('on', b.dataset.nav===tab));
   if(!fromPop && changed) history.pushState({tab}, '', '#'+tab);
   render();
-  if((tab==='history' || tab==='stats') && UI.returnScroll!=null){ window.scrollTo({top:UI.returnScroll}); UI.returnScroll=null; }
+  if(tab!=='add' && UI.returnScroll!=null){ window.scrollTo({top:UI.returnScroll}); UI.returnScroll=null; }
   else window.scrollTo({top:0});
-  if(tab==='stats' && UI.reopenSetup){ const sel = UI.reopenSetup; UI.reopenSetup = null; openSetupSheet(sel); }
-  else if(tab!=='add') UI.reopenSetup = null;
+  if(!fromPop && tab!=='add'){ UI.reopen = null; UI.editBack = false; }
 }
 function render(){
   if(UI.tab==='calendar') renderCalendar();
@@ -1843,16 +1915,32 @@ function render(){
 }
 document.querySelectorAll('[data-nav]').forEach(b=> b.addEventListener('click', ()=>{
   const t = b.dataset.nav;
-  if(t==='add') UI.form = UI.form && !UI.form.editingId ? UI.form : blankForm();
+  if(t==='add' && (!UI.form || UI.form.editingId)){ UI.form = blankForm(); UI.editBack = false; UI.reopen = null; }
   nav(t);
 }));
 
 /* Android/browser back: close open sheet first, then step back through tabs.
    Only backing out of the first screen exits the app. */
 window.addEventListener('popstate', e=>{
+  /* a sheet was closed by closeSheet(): run what was waiting on it */
+  if(sheetClosing){
+    sheetClosing = false;
+    const fn = afterSheetClose; afterSheetClose = null;
+    if(fn) fn();
+    return;
+  }
+  /* system back while a sheet is open: just close it */
   if(backdrop.classList.contains('open')){ domCloseSheet(); return; }
-  const tab = (e.state && e.state.tab) || 'calendar';
+  const st = e.state || {};
+  const tab = st.tab || 'calendar';
   if(document.getElementById('view-'+tab)) nav(tab, true);
+  if(st.sheet){
+    /* back onto a sheet's step: re-open that sheet, or skip the step if there's nothing to show */
+    const reopen = UI.reopen; UI.reopen = null;
+    if(!(reopen && reopen())) history.back();
+  } else {
+    UI.reopen = null;
+  }
 });
 
 if('serviceWorker' in navigator){ window.addEventListener('load',()=> navigator.serviceWorker.register('sw.js').catch(()=>{})); }
