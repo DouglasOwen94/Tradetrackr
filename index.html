@@ -318,6 +318,29 @@ const cleanNum = v => { const p = String(v).replace(/[^0-9.]/g,'').split('.'); r
 
 const DEFAULT_ASSETS = ['XAUUSD','EURUSD','GBPUSD','US30','NAS100','BTCUSD'];
 const DEFAULT_TAGS = ['Breakout','Retest','Reversal','Trend','News','Range'];
+/* Tag groups: each is one row on Add Trade. A trade takes at most one tag per group. */
+const TAG_GROUPS = [
+  { key:'level',  label:'Level',  hint:'pick one' },
+  { key:'entry',  label:'Entry',  hint:'pick one' },
+  { key:'refine', label:'Refine', hint:'optional' }
+];
+const GROUP_LABEL = { level:'Level', entry:'Entry', refine:'Refine', other:'Other' };
+/* First-time sort of existing tags, based on naming (DH, WOC, 4OC / Tap, 5mEng / 4R). Confirmed in Settings. */
+function guessGroup(tg){
+  const s = String(tg).trim();
+  if(/^(M|W|D|4)(OC|O|C|H|L)$/i.test(s)) return 'level';
+  if(/^tap$/i.test(s) || /eng/i.test(s)) return 'entry';
+  if(/^\d+\s*(R|Ref)$/i.test(s)) return 'refine';
+  return 'other';
+}
+function tagGroup(tg){ return (typeof S!=='undefined' && S && S.tagGroups && S.tagGroups[tg]) || 'other'; }
+/* Returns true if any tag had to be guessed */
+function fillTagGroups(d){
+  if(!d.tagGroups || typeof d.tagGroups !== 'object') d.tagGroups = {};
+  let guessed = false;
+  (d.tags||[]).forEach(tg=>{ if(!d.tagGroups[tg]){ d.tagGroups[tg] = guessGroup(tg); guessed = true; } });
+  return guessed;
+}
 /* Skeleton inserted into the notes box. Plan, Result and After are parsed for the weekly report; the rest is free text.
    Old short headers (P, E, Post) are still read so earlier trades keep working. */
 const NOTE_TEMPLATE = 'Plan: \nBefore: \nDuring: \nResult: Best+  Worst-  out  BE@\nAfter: \nLesson: \n';
@@ -337,6 +360,7 @@ function load(){
         if(d.settings.beThreshold==null) d.settings.beThreshold = 0;
         if(d.settings.lastBackupAt===undefined) d.settings.lastBackupAt = null;
         if(!Array.isArray(d.tags)) d.tags = [...DEFAULT_TAGS];
+        if(fillTagGroups(d) && d.tags.some(tg=>d.tagGroups[tg]!=='other')) d.settings.tagGroupsToReview = true;
         d.trades.forEach(t=>{ if(!Array.isArray(t.tags)) t.tags = []; });
         d.accounts.forEach(a=>{ if(a.monthlyGoal==null) a.monthlyGoal = 0; });
         d.v = 2; /* schema version for safe future migrations */
@@ -344,7 +368,7 @@ function load(){
       }
     }
   }catch(e){}
-  return { v:2, accounts:[], assets:[...DEFAULT_ASSETS], tags:[...DEFAULT_TAGS], trades:[], txns:[], settings:{ defaultAccountId:null, defaultAsset:'XAUUSD', beThreshold:0, lastBackupAt:null } };
+  return { v:2, accounts:[], assets:[...DEFAULT_ASSETS], tags:[...DEFAULT_TAGS], tagGroups:{}, trades:[], txns:[], settings:{ defaultAccountId:null, defaultAsset:'XAUUSD', beThreshold:0, lastBackupAt:null } };
 }
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ toast('Could not save — storage full'); } }
 
@@ -803,6 +827,45 @@ const calcExpr = f => f.entries.map((e,i)=>{
   return (e.sign<0?' − ':' + ') + num;
 }).join('');
 
+function tagPickerHTML(f){
+  const chip = tg => `<button class="select-chip ${f.tags.includes(tg)?'on':''}" data-tag="${esc(tg)}">${esc(tg)}</button>`;
+  const hint = h => `<span style="text-transform:none;font-weight:500;color:var(--ink-faint)">· ${h}</span>`;
+  let h = TAG_GROUPS.map(g=>`
+  <div class="section-label">${g.label} ${hint(g.hint)}</div>
+  <div class="chips tag-group" data-group="${g.key}">
+    ${S.tags.filter(tg=>tagGroup(tg)===g.key).map(chip).join('')}
+    <button class="select-chip ghost" data-new-tag="${g.key}">${I.plus}New</button>
+  </div>`).join('');
+  const other = S.tags.filter(tg=>tagGroup(tg)==='other');
+  if(other.length) h += `
+  <div class="section-label">Other tags ${hint('any')}</div>
+  <div class="chips tag-group" data-group="other">
+    ${other.map(chip).join('')}
+    <button class="select-chip ghost" data-new-tag="other">${I.plus}New</button>
+  </div>`;
+  return h;
+}
+/* Level, Entry and Refine hold one tag each: picking a new one replaces the old one. */
+function toggleFormTag(f, tg){
+  if(f.tags.includes(tg)){ f.tags = f.tags.filter(x=>x!==tg); return; }
+  const g = tagGroup(tg);
+  if(g!=='other') f.tags = f.tags.filter(x=>tagGroup(x)!==g);
+  f.tags = [...f.tags, tg];
+}
+/* Tagging problems. Only checks a group if you have tags in it. */
+function tagIssues(tags){
+  const out = [];
+  const inGroup = g => (tags||[]).filter(tg=>tagGroup(tg)===g).length;
+  const hasGroup = g => S.tags.some(tg=>tagGroup(tg)===g);
+  const L = inGroup('level'), E = inGroup('entry'), R = inGroup('refine');
+  if(hasGroup('level') && L===0) out.push('no level tag');
+  if(L>1) out.push(L+' level tags');
+  if(hasGroup('entry') && E===0) out.push('no entry tag');
+  if(E>1) out.push(E+' entry tags');
+  if(R>1) out.push(R+' refinement tags');
+  return out;
+}
+
 function renderAdd(){
   const el = document.getElementById('view-add');
   if(!S.accounts.length){ el.innerHTML = emptyOnboard(); return; }
@@ -833,11 +896,7 @@ function renderAdd(){
     <button class="sell ${f.direction==='sell'?'on':''}" data-dir="sell">${I.down}Sell</button>
   </div>
 
-  <div class="section-label">Setup <span style="text-transform:none;font-weight:500;color:var(--ink-faint)">· optional</span></div>
-  <div class="chips" id="f-tags">
-    ${S.tags.map(tg=>`<button class="select-chip ${f.tags.includes(tg)?'on':''}" data-tag="${esc(tg)}">${esc(tg)}</button>`).join('')}
-    <button class="select-chip ghost" id="f-new-tag">${I.plus}New</button>
-  </div>
+  ${tagPickerHTML(f)}
 
   <div class="section-label">PnL calculator</div>
   <div class="calc">
@@ -873,11 +932,12 @@ function renderAdd(){
   };
   el.querySelectorAll('[data-dir]').forEach(b=> b.onclick = ()=>{ f.direction=b.dataset.dir; renderAdd(); });
 
-  el.querySelector('#f-tags').onclick = e => {
+  el.querySelectorAll('.tag-group').forEach(row=> row.onclick = e => {
     const b=e.target.closest('[data-tag]');
-    if(b){ const tg=b.dataset.tag; f.tags = f.tags.includes(tg) ? f.tags.filter(x=>x!==tg) : [...f.tags, tg]; renderAdd(); return; }
-    if(e.target.closest('#f-new-tag')) openTagSheet(tg => { if(!f.tags.includes(tg)) f.tags.push(tg); renderAdd(); });
-  };
+    if(b){ toggleFormTag(f, b.dataset.tag); renderAdd(); return; }
+    const nb=e.target.closest('[data-new-tag]');
+    if(nb) openTagSheet(tg => { if(!f.tags.includes(tg)) toggleFormTag(f, tg); renderAdd(); }, nb.dataset.newTag);
+  });
 
   el.querySelector('#keypad').onclick = e => {
     const b = e.target.closest('[data-k]'); if(!b) return;
@@ -936,6 +996,12 @@ function saveTrade(){
   if(!f.asset) return toast('Pick an asset');
   const layers = f.entries.filter(e=>e.str!=='' && !isNaN(parseFloat(e.str))).map(e=> e.sign*parseFloat(e.str));
   if(!layers.length) return toast('Enter the PnL on the calculator');
+  const issues = tagIssues(f.tags);
+  if(issues.length && !f.tagsConfirmed){
+    return askSheet('Save with '+issues.join(' and ')+'?',
+      'The weekly report will list this trade as a tagging error. Go back to fix it, or save it as it is.',
+      'Save anyway', ()=>{ f.tagsConfirmed = true; saveTrade(); });
+  }
   const trade = {
     id: f.editingId || uid(),
     accountId: f.accountId, asset: f.asset, direction: f.direction,
@@ -1066,15 +1132,23 @@ function renderSettings(){
 
   <div class="card-glass">
     <div class="card-title"><h3>Setup tags</h3></div>
-    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Tag trades by setup — filter History by tag or spot which setups perform in Stats.</p>
-    <div>
-      ${S.tags.map(tg=>`
-      <span class="asset-tag" data-tg="${esc(tg)}">
-        <span>${esc(tg)}</span>
-        <button data-act="rm-tag" aria-label="Remove ${esc(tg)}">${I.x}</button>
-      </span>`).join('')}
-      <span class="asset-tag" style="background:transparent;border:1px dashed rgba(19,44,77,.3)"><button data-act="add-tag" style="display:flex;align-items:center;gap:6px;font:inherit;color:var(--ink-dark-dim)">${I.plus}Add</button></span>
-    </div>
+    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:4px">Each group is a row on Add Trade, and a trade takes one tag per group. Tap a tag to move it to a different group.</p>
+    ${S.settings.tagGroupsToReview ? `<div style="background:rgba(224,184,90,.1);border:1px solid var(--gold-line);border-radius:10px;padding:12px;margin:12px 0 4px">
+      <p style="font-size:.8rem;color:var(--ink);line-height:1.45;margin-bottom:10px">Your tags were sorted into groups by name. Check each one is in the right group.</p>
+      <button class="btn-soft" id="s-groups-ok" style="width:100%">${I.check}Groups look right</button>
+    </div>` : ''}
+    ${[...TAG_GROUPS, {key:'other', label:'Other'}].map(g=>{
+      const list = S.tags.filter(tg=>tagGroup(tg)===g.key);
+      if(g.key==='other' && !list.length) return '';
+      return `<div class="section-label" style="margin:16px 0 8px">${g.label}</div>
+      <div>
+        ${list.map(tg=>`<span class="asset-tag" data-tg="${esc(tg)}">
+          <button data-act="tag-group" style="font:inherit;color:inherit">${esc(tg)}</button>
+          <button data-act="rm-tag" aria-label="Remove ${esc(tg)}">${I.x}</button>
+        </span>`).join('')}
+        <span class="asset-tag" style="background:transparent;border:1px dashed rgba(255,255,255,.2)"><button data-act="add-tag" data-group="${g.key}" style="display:flex;align-items:center;gap:6px;font:inherit;color:var(--ink-dark-dim)">${I.plus}Add</button></span>
+      </div>`;
+    }).join('')}
   </div>
 
   <div class="card-glass">
@@ -1143,12 +1217,16 @@ Lesson: </pre>
     };
   });
   el.querySelector('[data-act="add-asset"]').onclick = ()=> openAssetSheet(()=> renderSettings());
-  el.querySelector('[data-act="add-tag"]').onclick = ()=> openTagSheet(()=> renderSettings());
+  el.querySelectorAll('[data-act="add-tag"]').forEach(b=> b.onclick = ()=> openTagSheet(()=> renderSettings(), b.dataset.group));
+  el.querySelectorAll('[data-act="tag-group"]').forEach(b=> b.onclick = ()=> openTagGroupSheet(b.closest('[data-tg]').dataset.tg));
+  const grpOk = el.querySelector('#s-groups-ok');
+  if(grpOk) grpOk.onclick = ()=>{ S.settings.tagGroupsToReview = false; save(); toast('Tag groups saved'); renderSettings(); };
   el.querySelectorAll('[data-act="rm-tag"]').forEach(b=> b.onclick = ()=>{
     const tg = b.closest('[data-tg]').dataset.tg;
     const used = S.trades.filter(t=>(t.tags||[]).includes(tg)).length;
     const doIt = ()=>{
       S.tags = S.tags.filter(x=>x!==tg);
+      if(S.tagGroups) delete S.tagGroups[tg];
       S.trades.forEach(t=>{ if(t.tags) t.tags = t.tags.filter(x=>x!==tg); });
       if(UI.historyTag===tg) UI.historyTag='all';
       save(); renderSettings();
@@ -1246,10 +1324,13 @@ function openTxnSheet(aid, kind){
   setTimeout(()=>document.getElementById('sh-amt').focus(),100);
 }
 
-function openTagSheet(onDone){
+function openTagSheet(onDone, group){
+  const g = group && GROUP_LABEL[group] ? group : 'other';
+  const title = {level:'New level tag', entry:'New entry tag', refine:'New refinement tag', other:'New tag'}[g];
+  const desc = {level:'A level you mark, e.g. DH, WL, 4OC.', entry:'A confirmation you enter on, e.g. 5mEng, 4hEng>15m.', refine:'A timeframe you refine on, e.g. 4R, 1R.', other:'Anything else you want to track.'}[g];
   openSheet(`
-    <h3>New setup tag</h3>
-    <p class="desc">Add a setup or pattern you trade — e.g. Breakout, Retest, Reversal.</p>
+    <h3>${title}</h3>
+    <p class="desc">${desc}</p>
     <div class="field">${I.hash}<input id="sh-tag" placeholder="Tag name" maxlength="20"></div>
     <button class="btn-primary" id="sh-save" style="margin-top:8px">${I.check}Add tag</button>
   `);
@@ -1257,11 +1338,44 @@ function openTagSheet(onDone){
     const tg = document.getElementById('sh-tag').value.trim();
     if(!tg) return toast('Enter a tag name');
     const existing = S.tags.find(x=>x.toLowerCase()===tg.toLowerCase());
-    if(!existing) S.tags.push(tg);
-    save(); closeSheet(); toast(existing ? existing+' already exists — selected' : tg+' added');
+    if(!S.tagGroups) S.tagGroups = {};
+    if(!existing){ S.tags.push(tg); S.tagGroups[tg] = g; }
+    save(); closeSheet();
+    toast(existing ? existing+' already exists in '+GROUP_LABEL[tagGroup(existing)] : tg+' added to '+GROUP_LABEL[g]);
     if(onDone) onDone(existing||tg);
   };
   setTimeout(()=>document.getElementById('sh-tag').focus(),100);
+}
+
+function openTagGroupSheet(tg){
+  const cur = tagGroup(tg);
+  openSheet(`
+    <h3>${esc(tg)}</h3>
+    <p class="desc">Which row should this tag appear in on Add Trade?</p>
+    <div class="chips" id="sh-groups">
+      ${['level','entry','refine','other'].map(k=>`<button class="select-chip ${k===cur?'on':''}" data-g="${k}">${GROUP_LABEL[k]}</button>`).join('')}
+    </div>
+  `);
+  document.getElementById('sh-groups').onclick = e=>{
+    const b = e.target.closest('[data-g]'); if(!b) return;
+    if(!S.tagGroups) S.tagGroups = {};
+    S.tagGroups[tg] = b.dataset.g; save(); closeSheet();
+    toast(tg+' is now in '+GROUP_LABEL[b.dataset.g]);
+    if(UI.tab==='settings') renderSettings();
+  };
+}
+
+function askSheet(title, desc, yesLabel, onYes){
+  openSheet(`
+    <h3>${esc(title)}</h3>
+    <p class="desc">${esc(desc)}</p>
+    <div class="row-btns">
+      <button class="btn-soft" id="sh-no" style="background:rgba(255,255,255,.08)">Go back</button>
+      <button class="btn-soft" id="sh-yes" style="background:linear-gradient(150deg,var(--gold-1),var(--gold-2));color:#1c1506">${esc(yesLabel)}</button>
+    </div>
+  `);
+  document.getElementById('sh-no').onclick = closeSheet;
+  document.getElementById('sh-yes').onclick = ()=>{ closeSheet(); onYes(); };
 }
 
 function openAssetSheet(onDone){
@@ -1305,7 +1419,7 @@ Lesson: </pre>
     ${row('Level','The level you traded from.')}
     ${row('Entry','The confirmation you entered on.')}
     ${row('Refine','Optional. The timeframe you refined the level on.')}
-    <p class="desc" style="margin-top:6px">Manage your tag list in Settings. The weekly report groups results by each tag and by each level + entry combination.</p>
+    <p class="desc" style="margin-top:6px">One tag per group. Sort your tags into groups in Settings.</p>
     <button class="btn-primary" id="sh-ok" style="margin-top:8px">${I.check}Got it</button>
   `);
   document.getElementById('sh-ok').onclick = closeSheet;
@@ -1346,8 +1460,9 @@ document.getElementById('import-file').addEventListener('change', e=>{
       const d = j.data && Array.isArray(j.data.accounts) ? j.data : (Array.isArray(j.accounts) ? j : null);
       if(!d) throw 0;
       confirmSheet('Restore this backup?','This replaces everything currently on this device with the backup file.',()=>{
-        S = { accounts:d.accounts||[], assets:d.assets||[...DEFAULT_ASSETS], tags:d.tags||[...DEFAULT_TAGS], trades:d.trades||[], txns:d.txns||[], settings:d.settings||{defaultAccountId:d.accounts?.[0]?.id||null, defaultAsset:'XAUUSD', beThreshold:0} };
+        S = { accounts:d.accounts||[], assets:d.assets||[...DEFAULT_ASSETS], tags:d.tags||[...DEFAULT_TAGS], tagGroups:d.tagGroups||{}, trades:d.trades||[], txns:d.txns||[], settings:d.settings||{defaultAccountId:d.accounts?.[0]?.id||null, defaultAsset:'XAUUSD', beThreshold:0} };
         S.trades.forEach(t=>{ if(!Array.isArray(t.tags)) t.tags = []; });
+        if(fillTagGroups(S) && S.tags.some(tg=>S.tagGroups[tg]!=='other')) S.settings.tagGroupsToReview = true;
         S.accounts.forEach(a=>{ if(a.monthlyGoal==null) a.monthlyGoal = 0; });
         save(); UI.statsAccountId=null; UI.historyFilter='all'; UI.form=null;
         toast('Backup restored'); nav('calendar');
@@ -1475,7 +1590,31 @@ function groupBlock(list, keyFn){
   const out = {}; Object.keys(m).forEach(k=> out[k] = statBlock(m[k]));
   return out;
 }
-const comboKey = t => (t.tags&&t.tags.length) ? [[...t.tags].sort((a,b)=>a.localeCompare(b)).join(' + ')] : null;
+const GROUP_ORDER = { level:0, refine:1, entry:2, other:3 };
+/* Combo name in Level + Refine + Entry order, e.g. "DL + 1R + 5mEng" */
+const comboKey = t => (t.tags&&t.tags.length) ? [[...t.tags].sort((a,b)=> (GROUP_ORDER[tagGroup(a)]-GROUP_ORDER[tagGroup(b)]) || a.localeCompare(b)).join(' + ')] : null;
+/* Broad groups, read from your tag names: M/W/D/4 prefix = timeframe, OC vs H/L = type, '>' = HTF>LTF engulf */
+function tradeGroups(t){
+  const of = g => (t.tags||[]).filter(tg=>tagGroup(tg)===g);
+  const L = of('level'), E = of('entry'), R = of('refine');
+  const lv = L.length===1 ? L[0] : null, en = E.length===1 ? E[0] : null;
+  const tf = lv ? ({M:'Monthly', W:'Weekly', D:'Daily', '4':'4H'}[lv.trim().charAt(0).toUpperCase()] || '(unrecognised)') : null;
+  return {
+    level: lv, entry: en, refine: R.length ? R.join(' + ') : 'none',
+    levelTimeframe: tf,
+    levelTier: tf ? ({Monthly:'Monthly/Weekly', Weekly:'Monthly/Weekly', Daily:'Daily/4H', '4H':'Daily/4H'}[tf] || '(unrecognised)') : null,
+    levelType: lv ? (/OC$/i.test(lv) ? 'Open/Close' : /[HL]$/i.test(lv) ? 'High/Low' : '(unrecognised)') : null,
+    confirmationStyle: en ? (/^tap$/i.test(en) ? 'Tap' : />/.test(en) ? 'HTF>LTF engulf' : /eng/i.test(en) ? 'Single engulf' : '(unrecognised)') : null,
+    refined: R.length ? 'Refined' : 'Unrefined'
+  };
+}
+function groupedBlocks(list){
+  const by = key => groupBlock(list, t => { const v = tradeGroups(t)[key]; return [v===null ? '(tag error)' : v]; });
+  return {
+    levelTier: by('levelTier'), levelTimeframe: by('levelTimeframe'), levelType: by('levelType'),
+    confirmationStyle: by('confirmationStyle'), refined: by('refined'), refinement: by('refine')
+  };
+}
 function exportWeekly(){
   if(!S.trades.length) return toast('No trades to report yet');
   const r2 = n => Math.round(n*100)/100;
@@ -1483,7 +1622,7 @@ function exportWeekly(){
   const week = S.trades.filter(t=> t.date>=from && t.date<=to)
     .sort((a,b)=> a.date===b.date ? a.createdAt-b.createdAt : (a.date<b.date?-1:1));
   const report = {
-    app:'tradetrackr', report:'weekly', version:2,
+    app:'tradetrackr', report:'weekly', version:3,
     journalFormat: 'Plan: entry SLpips TPpips | Before | During | Result: Best+pips Worst-pips out<price> BE@<pips in profit when stop moved to entry> | After: SL/TP/none then free text | Lesson',
     generatedAt: new Date().toISOString(),
     period: { from, to },
@@ -1495,6 +1634,9 @@ function exportWeekly(){
     allTime: statBlock(S.trades),
     thisWeekByTag: groupBlock(week, t=> (t.tags&&t.tags.length) ? t.tags : null),
     allTimeByTag: groupBlock(S.trades, t=> (t.tags&&t.tags.length) ? t.tags : null),
+    tagGroups: Object.fromEntries(S.tags.map(tg=>[tg, tagGroup(tg)])),
+    thisWeekByGroup: groupedBlocks(week),
+    allTimeByGroup: groupedBlocks(S.trades),
     thisWeekByCombo: groupBlock(week, comboKey),
     allTimeByCombo: groupBlock(S.trades, comboKey),
     thisWeekByDirection: groupBlock(week, t=>[t.direction]),
@@ -1502,7 +1644,7 @@ function exportWeekly(){
     trades: week.map(t=>({
       date: t.date, asset: t.asset, direction: t.direction,
       pnl: r2(tradePnl(t)), layers: t.layers, result: classify(t),
-      tags: t.tags||[], parsed: parseJournal(t), notes: t.notes||''
+      tags: t.tags||[], groups: tradeGroups(t), tagCheck: tagIssues(t.tags), parsed: parseJournal(t), notes: t.notes||''
     }))
   };
   const txt = JSON.stringify(report, null, 2);
