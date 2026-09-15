@@ -222,7 +222,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:40;display:flex;justify-conte
 /* ---------- sheet / modal ---------- */
 .sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);z-index:60;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}
 .sheet-backdrop.open{opacity:1;pointer-events:auto}
-.sheet{width:100%;max-width:480px;background:linear-gradient(170deg,#241e12,#171208);border-top:1px solid var(--gold-line);border-radius:18px 18px 0 0;padding:22px 20px calc(26px + env(safe-area-inset-bottom));transform:translateY(30px);transition:transform .2s;color:var(--ink)}
+.sheet{width:100%;max-width:480px;background:linear-gradient(170deg,#241e12,#171208);border-top:1px solid var(--gold-line);border-radius:18px 18px 0 0;padding:22px 20px calc(26px + env(safe-area-inset-bottom));transform:translateY(30px);transition:transform .2s;color:var(--ink);max-height:calc(100vh - env(safe-area-inset-top) - 24px);max-height:calc(100dvh - env(safe-area-inset-top) - 24px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .sheet-backdrop.open .sheet{transform:translateY(0)}
 .sheet h3{font-size:1.1rem;margin-bottom:4px;color:var(--ink)}
 .sheet .desc{font-size:.82rem;color:var(--ink-dim);margin-bottom:16px;line-height:1.45}
@@ -1080,7 +1080,7 @@ function renderSettings(){
   <div class="card-glass">
     <div class="card-title"><h3>Journal format</h3></div>
     <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Plan, Result and After are read by the weekly report, so keep those lines in this shape. Before, During and Lesson are your own words.</p>
-    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.74rem;line-height:1.6;overflow-x:auto;white-space:pre;color:var(--ink-dark)">Plan: 4289 SL30 TP60
+    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.74rem;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:var(--ink-dark)">Plan: 4289 SL30 TP60
 Before: 4H engulf + 15m engulf, bought the retrace
 During: ranging, 5m bottom wicks, DXY at resistance
 Result: Best+27 Worst-20 out4289 BE@20
@@ -1289,7 +1289,7 @@ function openLegendSheet(){
   openSheet(`
     <h3>Journal format</h3>
     <p class="desc">Write Plan before you click. Fill the rest as the trade plays out.</p>
-    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.76rem;line-height:1.6;overflow-x:auto;white-space:pre;margin-bottom:14px">Plan: 4289 SL30 TP60
+    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.76rem;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin-bottom:14px">Plan: 4289 SL30 TP60
 Before: 4H engulf + 15m engulf, bought the retrace
 During: ranging, 5m bottom wicks, DXY at resistance
 Result: Best+27 Worst-20 out4289 BE@20
