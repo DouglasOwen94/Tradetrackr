@@ -119,10 +119,16 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .setup-tabs button:focus-visible,.setup-range button:focus-visible{outline:2px solid var(--gold-1);outline-offset:2px}
 .setup-total{display:flex;justify-content:space-between;font-size:.72rem;color:var(--ink-faint);padding:10px 0 4px}
 .setup-total b{color:var(--ink-dim);font-weight:700}
-.setup-row{padding:12px 0 13px;border-bottom:1px solid rgba(255,255,255,.06)}
-.setup-row:last-of-type{border-bottom:none}
+.setup-row{display:block;width:calc(100% + 16px);margin:0 -8px;text-align:left;color:inherit;font:inherit;padding:12px 8px 13px;border-bottom:1px solid rgba(255,255,255,.06);border-radius:8px;transition:background .15s}
+.setup-row:active{background:rgba(255,255,255,.04)}
+.setup-row:focus-visible{outline:2px solid var(--gold-1);outline-offset:-2px}
+.setup-chev{display:flex;color:var(--ink-faint);margin-left:-2px}
+.setup-chev svg{width:15px;height:15px;stroke:currentColor}
+.mini-tag.sheet-tag{display:inline-block;font-size:.95rem;padding:6px 12px;border-radius:7px;vertical-align:middle;margin-right:10px}
+.sheet-range{font-size:.9rem;font-weight:600;color:var(--ink-dim);vertical-align:middle}
+.setup-row:last-of-type{border-bottom-color:transparent}
 .setup-head{display:flex;align-items:center;gap:10px}
-.setup-head .mini-tag{font-size:.7rem;padding:5px 10px}
+.setup-head .mini-tag.mini-tag{font-size:.7rem;padding:5px 10px}
 .setup-head .mini-tag.none{background:transparent;border:1px dashed rgba(255,255,255,.18);color:var(--ink-dim)}
 .setup-count{flex:1;min-width:0;font-size:.72rem;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .setup-count .w{color:var(--green)} .setup-count .l{color:var(--red)} .setup-count .b{color:var(--ink-dim)}
@@ -669,7 +675,7 @@ function renderStats(){
     const fillPct = Math.min(b.n, SAMPLE)/SAMPLE*100;
     const full = b.n >= SAMPLE;
     const seg = (cls, v) => v ? `<i class="${cls}" style="flex:${v}"></i>` : '';
-    return `<div class="setup-row">
+    return `<button class="setup-row" ${isNone?'data-none="1"':`data-skey="${esc(tg)}"`} aria-label="Show ${b.n} ${esc(label)} trade${b.n===1?'':'s'}">
       <div class="setup-head">
         <span class="mini-tag ${isNone?'none':''}">${esc(label)}</span>
         <span class="setup-count">${b.n} trade${b.n===1?'':'s'} · <span class="${b.w?'w':''}">${b.w}W</span> <span class="${b.l?'l':''}">${b.l}L</span> <span class="${b.be?'b':''}">${b.be}BE</span></span>
@@ -677,12 +683,13 @@ function renderStats(){
           <b style="color:${b.pnl>0?'var(--green)':b.pnl<0?'var(--red)':'var(--ink-dim)'}">${money(b.pnl,true)}</b>
           <span>${won}% won</span>
         </div>
+        <span class="setup-chev">${I.chevR}</span>
       </div>
       <div class="meter" role="img" aria-label="${b.w} wins, ${b.l} losses, ${b.be} breakeven. ${full ? 'Sample of '+b.n+' trades' : b.n+' of '+SAMPLE+' trades needed'}">
         <div class="meter-track"><div class="meter-fill" style="width:${fillPct}%">${seg('w',b.w)}${seg('l',b.l)}${seg('b',b.be)}</div></div>
         <span class="meter-n ${full?'full':''}">${full ? b.n : b.n+'/'+SAMPLE}</span>
       </div>
-    </div>`;
+    </button>`;
   };
 
   el.innerHTML = `
@@ -799,7 +806,9 @@ function renderStats(){
   const setupCard = el.querySelector('#setup-card');
   if(setupCard) setupCard.onclick = e => {
     const r = e.target.closest('[data-range]'); if(r){ UI.setupRange = r.dataset.range; renderStats(); return; }
-    const g = e.target.closest('[data-sgroup]'); if(g){ UI.setupGroup = g.dataset.sgroup; renderStats(); }
+    const g = e.target.closest('[data-sgroup]'); if(g){ UI.setupGroup = g.dataset.sgroup; renderStats(); return; }
+    const row = e.target.closest('.setup-row');
+    if(row) openSetupSheet({ range:setupRange, group:setupGroup, key:row.dataset.skey||null, none:!!row.dataset.none });
   };
   el.querySelector('#m-prev').onclick = () => { UI.statsM--; if(UI.statsM<0){UI.statsM=11;UI.statsY--;} renderStats(); };
   const nx = el.querySelector('#m-next'); if(nx) nx.onclick = () => { UI.statsM++; if(UI.statsM>11){UI.statsM=0;UI.statsY++;} renderStats(); };
@@ -900,6 +909,52 @@ const calcExpr = f => f.entries.map((e,i)=>{
   if(i===0) return (e.sign<0?'−':'') + num;
   return (e.sign<0?' − ':' + ') + num;
 }).join('');
+
+/* Does a trade belong in a By setup row? none=true means "has no tag in this group" */
+function setupMatch(t, group, key, none){
+  const inGroup = (t.tags||[]).filter(tg=>tagGroup(tg)===group);
+  return none ? inGroup.length===0 : inGroup.includes(key);
+}
+function tradeRowHTML(t, meta){
+  const p = tradePnl(t); const kind = classify(t);
+  const cls = kind==='win'?'pos':kind==='loss'?'neg':'be';
+  return `<button class="trade-row" data-id="${t.id}">
+    <span class="ava">${esc(t.asset.slice(0,3))}</span>
+    <span class="mid">
+      <span class="sym">${esc(t.asset)}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
+      ${meta?`<span class="meta">${meta}</span>`:''}
+      ${t.tags&&t.tags.length?`<span class="tagrow">${t.tags.map(tg=>`<span class="mini-tag">${esc(tg)}</span>`).join('')}</span>`:''}
+      ${t.notes?`<span class="note">${esc(t.notes)}</span>`:''}
+    </span>
+    <span class="pnl ${cls}">${kind==='be'?'BE':money(p,true)}${kind==='be'?'<small>'+money(p,true)+'</small>':''}</span>
+    ${I.chevR}
+  </button>`;
+}
+function openSetupSheet(sel){
+  const aid = UI.statsAccountId, y = UI.statsY, m = UI.statsM;
+  const pool = sel.range==='all' ? S.trades.filter(t=>t.accountId===aid) : monthTrades(aid, y, m);
+  const trades = pool.filter(t=>setupMatch(t, sel.group, sel.key, sel.none))
+    .sort((a,b)=> a.date===b.date ? (b.createdAt-a.createdAt) : (a.date<b.date?1:-1));
+  if(!trades.length) return;
+  const w = trades.filter(t=>classify(t)==='win').length, l = trades.filter(t=>classify(t)==='loss').length, be = trades.length-w-l;
+  const pnl = trades.reduce((s,t)=>s+tradePnl(t),0);
+  const label = sel.none ? ({level:'No level', entry:'No entry', refine:'No refinement'}[sel.group]) : sel.key;
+  openSheet(`
+    <h3><span class="mini-tag sheet-tag" ${sel.none?'style="background:transparent;border:1px dashed rgba(255,255,255,.18);color:var(--ink-dim)"':''}>${esc(label)}</span><span class="sheet-range">${sel.range==='all'?'All time':MONTHS_S[m]+' '+y}</span></h3>
+    <p class="desc">${trades.length} trade${trades.length===1?'':'s'} · ${w}W ${l}L ${be}BE · <b style="color:${pnl>0?'var(--green)':pnl<0?'var(--red)':'inherit'}">${money(pnl,true)}</b></p>
+    <div>${trades.map(t=> tradeRowHTML(t, esc(relDay(t.date)) + (t.layers.length>1?' · '+t.layers.length+' layers':''))).join('')}</div>
+  `);
+  sheetEl.querySelectorAll('.trade-row').forEach(r=> r.onclick = ()=>{
+    const t = S.trades.find(x=>x.id===r.dataset.id); if(!t) return;
+    const keep = window.scrollY;
+    closeSheet();
+    UI.form = formFromTrade(t);
+    UI.returnTo = 'stats';
+    UI.returnScroll = keep;
+    UI.reopenSetup = sel;
+    nav('add');
+  });
+}
 
 function tagPickerHTML(f){
   const chip = tg => `<button class="select-chip ${f.tags.includes(tg)?'on':''}" data-tag="${esc(tg)}">${esc(tg)}</button>`;
@@ -1774,8 +1829,10 @@ function nav(tab, fromPop){
   document.querySelectorAll('.nav-item').forEach(b=> b.classList.toggle('on', b.dataset.nav===tab));
   if(!fromPop && changed) history.pushState({tab}, '', '#'+tab);
   render();
-  if(tab==='history' && UI.returnScroll!=null){ window.scrollTo({top:UI.returnScroll}); UI.returnScroll=null; }
+  if((tab==='history' || tab==='stats') && UI.returnScroll!=null){ window.scrollTo({top:UI.returnScroll}); UI.returnScroll=null; }
   else window.scrollTo({top:0});
+  if(tab==='stats' && UI.reopenSetup){ const sel = UI.reopenSetup; UI.reopenSetup = null; openSetupSheet(sel); }
+  else if(tab!=='add') UI.reopenSetup = null;
 }
 function render(){
   if(UI.tab==='calendar') renderCalendar();
