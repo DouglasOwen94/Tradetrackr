@@ -318,10 +318,11 @@ const cleanNum = v => { const p = String(v).replace(/[^0-9.]/g,'').split('.'); r
 
 const DEFAULT_ASSETS = ['XAUUSD','EURUSD','GBPUSD','US30','NAS100','BTCUSD'];
 const DEFAULT_TAGS = ['Breakout','Retest','Reversal','Trend','News','Range'];
-/* Journal tag set — HTF level / entry model / discipline. Load from Settings. */
-const JOURNAL_TAGS = ['WO','WH','WL','WC','DO','DH','DL','DC','MO','+4H','Tap','5mEng','1hEng>5m','DailyEng','Rules-Y','Rules-N'];
-/* Skeleton inserted into the notes box. Keep it short enough to fill in under a minute. */
-const NOTE_TEMPLATE = 'P: \nE: Best+  Worst-  out \nL: \n';
+/* Skeleton inserted into the notes box. Plan, Result and After are parsed for the weekly report; the rest is free text.
+   Old short headers (P, E, Post) are still read so earlier trades keep working. */
+const NOTE_TEMPLATE = 'Plan: \nBefore: \nDuring: \nResult: Best+  Worst-  out  BE@\nAfter: \nLesson: \n';
+/* Price move per pip, used to turn entry/exit prices into pips and R. XAUUSD: 1 pip = 0.10 */
+const PIP_SIZE = { XAUUSD: 0.1 };
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTHS_S = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
@@ -859,7 +860,7 @@ function renderAdd(){
     <button class="select-chip ghost" id="f-tpl">${I.plus}Template</button>
     <button class="select-chip ghost" id="f-legend">${I.note}Legend</button>
   </div>
-  <div class="field">${I.note}<textarea id="f-notes" placeholder="P: WO 3344 SL80 TP80 — tap Template to start">${esc(f.notes)}</textarea></div>
+  <div class="field">${I.note}<textarea id="f-notes" placeholder="Plan: 4289 SL30 TP60 — tap Template to start">${esc(f.notes)}</textarea></div>
 
   <button class="btn-primary" id="f-save">${I.check}${editing?'Save changes':'Save trade'}</button>
   ${editing?`<button class="btn-danger-ghost" id="f-delete">${I.trash}Delete trade</button>`:''}`;
@@ -910,9 +911,9 @@ function renderAdd(){
   el.querySelector('#f-date').onchange = e=> f.date = e.target.value || todayISO();
   el.querySelector('#f-tpl').onclick = ()=>{
     if(!f.notes.trim()) f.notes = NOTE_TEMPLATE;
-    else if(!/^P:/m.test(f.notes)) f.notes = NOTE_TEMPLATE + '\n' + f.notes;
+    else if(!/^\s*(P|Plan)\s*:/im.test(f.notes)) f.notes = NOTE_TEMPLATE + '\n' + f.notes;
     renderAdd();
-    setTimeout(()=>{ const t = document.getElementById('f-notes'); if(t){ t.focus(); t.setSelectionRange(3,3); } }, 40);
+    setTimeout(()=>{ const t = document.getElementById('f-notes'); if(t){ t.focus(); t.setSelectionRange(6,6); } }, 40);
   };
   el.querySelector('#f-legend').onclick = openLegendSheet;
 
@@ -1074,16 +1075,17 @@ function renderSettings(){
       </span>`).join('')}
       <span class="asset-tag" style="background:transparent;border:1px dashed rgba(19,44,77,.3)"><button data-act="add-tag" style="display:flex;align-items:center;gap:6px;font:inherit;color:var(--ink-dark-dim)">${I.plus}Add</button></span>
     </div>
-    <button class="btn-soft" id="s-journal-tags" style="width:100%;margin-top:12px">${I.plus}Load journal tag set</button>
-    <p style="font-size:.72rem;color:var(--ink-dark-dim);margin-top:8px">Adds the HTF level, entry model and rules tags. Nothing is removed.</p>
   </div>
 
   <div class="card-glass">
     <div class="card-title"><h3>Journal format</h3></div>
-    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Same three lines every trade \u2014 that\'s what makes the weekly review work.</p>
-    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.74rem;line-height:1.6;overflow-x:auto;white-space:pre;color:var(--ink-dark)">P: WO 3344 SL80 TP80
-E: Best+145 Worst-22 out3327 BE@60
-L: closed 7p before TP out of fear</pre>
+    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Plan, Result and After are read by the weekly report, so keep those lines in this shape. Before, During and Lesson are your own words.</p>
+    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.74rem;line-height:1.6;overflow-x:auto;white-space:pre;color:var(--ink-dark)">Plan: 4289 SL30 TP60
+Before: 4H engulf + 15m engulf, bought the retrace
+During: ranging, 5m bottom wicks, DXY at resistance
+Result: Best+27 Worst-20 out4289 BE@20
+After: SL, kept dropping after BE hit
+Lesson: </pre>
     <button class="btn-soft" id="s-legend" style="width:100%;margin-top:12px">${I.note}What each line means</button>
   </div>
 
@@ -1169,12 +1171,6 @@ L: closed 7p before TP out of fear</pre>
   el.querySelector('#s-export-week').onclick = exportWeekly;
   el.querySelector('#s-export-csv').onclick = exportCSV;
   el.querySelector('#s-legend').onclick = openLegendSheet;
-  el.querySelector('#s-journal-tags').onclick = ()=>{
-    const added = JOURNAL_TAGS.filter(tg=> !S.tags.some(x=> x.toLowerCase()===tg.toLowerCase()));
-    if(!added.length) return toast('Journal tags already loaded');
-    S.tags.push(...added); save(); renderSettings();
-    toast(added.length+' tag'+(added.length===1?'':'s')+' added');
-  };
   el.querySelector('#s-import').onclick = ()=> document.getElementById('import-file').click();
   el.querySelector('#s-reset').onclick = ()=> confirmSheet('Erase all data?','Every account, trade, and note will be permanently deleted from this device.',()=>{
     localStorage.removeItem(LS_KEY); S = load(); UI = {tab:'calendar',statsAccountId:null,statsY:now.getFullYear(),statsM:now.getMonth(),historyFilter:'all', historyTag:'all', form:null};
@@ -1289,21 +1285,26 @@ function openAssetSheet(onDone){
 
 function openLegendSheet(){
   const row = (k,v)=>`<div style="display:flex;gap:10px;padding:5px 0;font-size:.82rem;line-height:1.45">
-    <b style="min-width:52px;color:var(--gold-1)">${k}</b><span style="color:var(--ink-dark-dim)">${v}</span></div>`;
+    <b style="min-width:62px;color:var(--gold-1)">${k}</b><span style="color:var(--ink-dark-dim)">${v}</span></div>`;
   openSheet(`
     <h3>Journal format</h3>
-    <p class="desc">Two lines before you enter, two after close. Under a minute.</p>
-    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.76rem;line-height:1.6;overflow-x:auto;white-space:pre;margin-bottom:14px">P: WO 3344 SL80 TP80
-E: Best+145 Worst-22 out3327 BE@60
-L: closed 7p before TP out of fear</pre>
-    ${row('P','Level, entry price, stop pips, target pips. Write this <b>before</b> you click buy.')}
-    ${row('E','Best = furthest it went your way. Worst = furthest against. Exit price. Stop moved?')}
-    ${row('L','One specific lesson. Not \u201cbe patient\u201d \u2014 something you can check next week.')}
+    <p class="desc">Write Plan before you click. Fill the rest as the trade plays out.</p>
+    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.76rem;line-height:1.6;overflow-x:auto;white-space:pre;margin-bottom:14px">Plan: 4289 SL30 TP60
+Before: 4H engulf + 15m engulf, bought the retrace
+During: ranging, 5m bottom wicks, DXY at resistance
+Result: Best+27 Worst-20 out4289 BE@20
+After: SL, kept dropping after BE hit
+Lesson: </pre>
+    ${row('Plan','Entry price, stop in pips, target in pips. The level goes in your tags, not here.')}
+    ${row('Before','What you saw before entering: level, confirmation, DXY, momentum, how you feel.')}
+    ${row('During','What price is doing and anything you change. If you move your stop somewhere other than entry, write the price here.')}
+    ${row('Result','Best = furthest pips in your favour. Worst = furthest pips against. out = exit price. BE@ = how many pips in profit price was when you moved your stop to entry. Leave BE@ blank if you never moved it.')}
+    ${row('After','Only if you exited before your SL or TP: after you were out, which did price reach first? Start with SL, TP or none, then add anything else.')}
+    ${row('Lesson','One lesson you can check next week.')}
     <div class="section-label" style="margin-top:16px">Tags</div>
-    ${row('Level','WO WH WL WC \u00b7 DO DH DL DC \u00b7 MO \u00b7 +4H if you refined')}
-    ${row('Entry','Tap \u00b7 5mEng \u00b7 1hEng&gt;5m \u00b7 DailyEng')}
-    ${row('Rules','Rules-Y if you followed your plan, Rules-N if you didn\'t. Tag it honestly \u2014 the Rules-N trades are the useful ones.')}
-    <p class="desc" style="margin-top:14px">Rules-N = entered before your trigger, stop over 100 pips, not a level on your list, added a layer to a loser, or a revenge/FOMO entry.</p>
+    ${row('Level','The level you traded from.')}
+    ${row('Entry','The confirmation you entered on.')}
+    <p class="desc" style="margin-top:6px">Manage your tag list in Settings. The weekly report groups results by each tag and by each level + entry combination.</p>
     <button class="btn-primary" id="sh-ok" style="margin-top:8px">${I.check}Got it</button>
   `);
   document.getElementById('sh-ok').onclick = closeSheet;
@@ -1358,6 +1359,64 @@ document.getElementById('import-file').addEventListener('change', e=>{
   reader.readAsText(file);
 });
 
+/* ---------- journal parser (P / E / Post lines) ---------- */
+function lineOf(notes, key){
+  const m = String(notes||'').match(new RegExp('^\\s*'+key+'\\s*:\\s*(.*)$','im'));
+  return m ? m[1].trim() : null;
+}
+const numOr = (m, i=1) => m ? parseFloat(m[i]) : null;
+function parseJournal(t){
+  const notes = t.notes || '';
+  const warn = [];
+  const P = lineOf(notes,'(?:Plan|P)'), E = lineOf(notes,'(?:Result|E)'), AfterL = lineOf(notes,'(?:After|Post)');
+  let entry=null, slPips=null, tpPips=null;
+  if(P){
+    slPips = numOr(P.match(/SL\s*(\d+(?:\.\d+)?)/i));
+    tpPips = numOr(P.match(/TP\s*(\d+(?:\.\d+)?)/i));
+    entry = numOr(P.replace(/(SL|TP)\s*\d+(?:\.\d+)?/ig,'').match(/(\d{3,}(?:\.\d+)?)/));
+    if(entry===null) warn.push('Plan: no entry price');
+    if(slPips===null) warn.push('Plan: no SL');
+    if(tpPips===null) warn.push('Plan: no TP');
+  } else warn.push('no Plan line');
+  let bestPips=null, worstPips=null, exitPrice=null, beAtPips=null;
+  if(E){
+    bestPips = numOr(E.match(/Best\s*\+?\s*(\d+(?:\.\d+)?)/i));
+    const w = numOr(E.match(/Worst\s*-?\s*(\d+(?:\.\d+)?)/i));
+    worstPips = w===null ? null : -Math.abs(w);
+    exitPrice = numOr(E.match(/out\s*@?\s*(\d+(?:\.\d+)?)/i));
+    beAtPips = numOr(E.match(/BE\s*@\s*(\d+(?:\.\d+)?)/i));
+    if(bestPips===null) warn.push('Result: no Best');
+    if(worstPips===null) warn.push('Result: no Worst');
+    if(exitPrice===null) warn.push('Result: no exit price');
+  } else warn.push('no Result line');
+  let after = null;
+  if(AfterL){
+    const pm = AfterL.match(/^(SL|TP|none)\b/i);
+    after = pm ? (pm[1].toLowerCase()==='none' ? 'none' : pm[1].toUpperCase()) : AfterL;
+  }
+  const pip = PIP_SIZE[String(t.asset||'').toUpperCase()] || null;
+  const dir = t.direction==='sell' ? -1 : 1;
+  const r2 = n => n===null||!isFinite(n) ? null : Math.round(n*100)/100;
+  const exitPips = (pip && entry!==null && exitPrice!==null) ? r2((exitPrice-entry)*dir/pip) : null;
+  const hasSL = slPips!==null && slPips>0;
+  const layered = (t.layers||[]).length>1;
+  if(layered && exitPips!==null) warn.push('layered: exitR covers the Plan entry only');
+  return {
+    entry, slPips, tpPips,
+    stopPrice: (pip && entry!==null && hasSL) ? r2(entry - dir*slPips*pip) : null,
+    plannedRR: (hasSL && tpPips!==null) ? r2(tpPips/slPips) : null,
+    bestPips, worstPips, exitPrice, exitPips, beAtPips, after,
+    r: {
+      exit: hasSL && exitPips!==null ? r2(exitPips/slPips) : null,
+      best: hasSL && bestPips!==null ? r2(bestPips/slPips) : null,
+      worst: hasSL && worstPips!==null ? r2(worstPips/slPips) : null,
+      beTrigger: hasSL && beAtPips!==null ? r2(beAtPips/slPips) : null
+    },
+    stopOver100: slPips!==null ? slPips>100 : null,
+    warnings: warn
+  };
+}
+
 function weekStartISO(){
   const d = new Date(); d.setDate(d.getDate()-6);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -1376,7 +1435,37 @@ function statBlock(list){
     avgLoss: losses.length ? r2(sum(losses)/losses.length) : null,
     largestWin: p.length ? r2(Math.max.apply(null,p)) : null,
     largestLoss: p.length ? r2(Math.min.apply(null,p)) : null,
-    layeredTrades: list.filter(t=>(t.layers||[]).length>1).length
+    layeredTrades: list.filter(t=>(t.layers||[]).length>1).length,
+    journal: rBlock(list)
+  };
+}
+function rBlock(list){
+  const r2 = n => Math.round(n*100)/100;
+  const avg = a => a.length ? r2(a.reduce((s,x)=>s+x,0)/a.length) : null;
+  const J = list.map(parseJournal);
+  const exitR = J.map(j=>j.r.exit).filter(x=>x!==null);
+  const beMoved = J.filter(j=>j.beAtPips!==null);
+  const beExits = list.filter((t,i)=> J[i].beAtPips!==null && classify(t)==='be');
+  const beExitJ = beExits.map(t=> J[list.indexOf(t)]);
+  return {
+    tradesWithFullPlan: J.filter(j=>j.entry!==null && j.slPips!==null && j.tpPips!==null).length,
+    tradesWithR: exitR.length,
+    netR: exitR.length ? r2(exitR.reduce((s,x)=>s+x,0)) : null,
+    avgR: avg(exitR),
+    avgBestR: avg(J.map(j=>j.r.best).filter(x=>x!==null)),
+    avgWorstR: avg(J.map(j=>j.r.worst).filter(x=>x!==null)),
+    avgPlannedRR: avg(J.map(j=>j.plannedRR).filter(x=>x!==null)),
+    stopMovedToEntry: beMoved.length,
+    avgBeTriggerR: avg(beMoved.map(j=>j.r.beTrigger).filter(x=>x!==null)),
+    beExits: beExits.length,
+    beExitsAfter: {
+      SL: beExitJ.filter(j=>j.after==='SL').length,
+      TP: beExitJ.filter(j=>j.after==='TP').length,
+      none: beExitJ.filter(j=>j.after==='none').length,
+      notLogged: beExitJ.filter(j=>j.after===null).length
+    },
+    stopsOver100: J.filter(j=>j.stopOver100).length,
+    tradesWithWarnings: J.filter(j=>j.warnings.length).length
   };
 }
 function groupBlock(list, keyFn){
@@ -1385,6 +1474,7 @@ function groupBlock(list, keyFn){
   const out = {}; Object.keys(m).forEach(k=> out[k] = statBlock(m[k]));
   return out;
 }
+const comboKey = t => (t.tags&&t.tags.length) ? [[...t.tags].sort((a,b)=>a.localeCompare(b)).join(' + ')] : null;
 function exportWeekly(){
   if(!S.trades.length) return toast('No trades to report yet');
   const r2 = n => Math.round(n*100)/100;
@@ -1392,7 +1482,8 @@ function exportWeekly(){
   const week = S.trades.filter(t=> t.date>=from && t.date<=to)
     .sort((a,b)=> a.date===b.date ? a.createdAt-b.createdAt : (a.date<b.date?-1:1));
   const report = {
-    app:'tradetrackr', report:'weekly', version:1,
+    app:'tradetrackr', report:'weekly', version:2,
+    journalFormat: 'Plan: entry SLpips TPpips | Before | During | Result: Best+pips Worst-pips out<price> BE@<pips in profit when stop moved to entry> | After: SL/TP/none then free text | Lesson',
     generatedAt: new Date().toISOString(),
     period: { from, to },
     accounts: S.accounts.map(a=>({
@@ -1403,11 +1494,14 @@ function exportWeekly(){
     allTime: statBlock(S.trades),
     thisWeekByTag: groupBlock(week, t=> (t.tags&&t.tags.length) ? t.tags : null),
     allTimeByTag: groupBlock(S.trades, t=> (t.tags&&t.tags.length) ? t.tags : null),
+    thisWeekByCombo: groupBlock(week, comboKey),
+    allTimeByCombo: groupBlock(S.trades, comboKey),
     thisWeekByDirection: groupBlock(week, t=>[t.direction]),
+    allTimeByDirection: groupBlock(S.trades, t=>[t.direction]),
     trades: week.map(t=>({
       date: t.date, asset: t.asset, direction: t.direction,
       pnl: r2(tradePnl(t)), layers: t.layers, result: classify(t),
-      tags: t.tags||[], notes: t.notes||''
+      tags: t.tags||[], parsed: parseJournal(t), notes: t.notes||''
     }))
   };
   const txt = JSON.stringify(report, null, 2);
