@@ -77,7 +77,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .chip.pos{color:#8ff5c4}.chip.pos svg{stroke:#8ff5c4}
 .chip.neg{color:#ffb3a8}.chip.neg svg{stroke:#ffb3a8}
 .chip.neutral{color:#f0e6cd}.chip.neutral svg{stroke:#f0e6cd}
-.hero-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.hero-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:18px}
 .hero-actions button{background:rgba(24,17,4,.18);border:1px solid rgba(24,17,4,.16);border-radius:var(--r-md);padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;color:#241b07;font-size:.75rem;font-weight:700;transition:background .15s}
 .hero-actions button:active{background:rgba(24,17,4,.32)}
 .hero-actions svg{width:18px;height:18px;stroke:#241b07}
@@ -140,7 +140,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .meter-fill{display:flex;height:100%;gap:2px;transform-origin:left;animation:meterIn .5s cubic-bezier(.2,.7,.2,1) both}
 .meter-fill i{display:block;height:100%}
 .meter-fill i.w{background:var(--green)} .meter-fill i.l{background:var(--red)} .meter-fill i.b{background:#6b6250}
-.meter-n{font-size:.64rem;font-weight:700;color:var(--ink-faint);min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.meter-n{font-size:.68rem;font-weight:700;color:var(--ink-faint);min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
 .meter-n.full{color:var(--gold-1)}
 /* Combos */
 .combo-cover{font-size:.72rem;color:var(--ink-faint);padding:2px 0 6px;line-height:1.45}
@@ -169,10 +169,10 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .combo-tags .mini-tag.soft{background:rgba(255,255,255,.06);color:var(--ink-dim)}
 .combo-adj{text-align:right;line-height:1.1;white-space:nowrap}
 .combo-adj b{display:block;font-size:.98rem;font-variant-numeric:tabular-nums}
-.combo-adj span{font-size:.62rem;color:var(--ink-faint);letter-spacing:.02em}
+.combo-adj span{font-size:.68rem;color:var(--ink-faint);letter-spacing:.02em}
 .combo-mid{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.72rem;color:var(--ink-faint)}
 .combo-mid .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.verdict{font-size:.64rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.verdict{font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
 .verdict.edge{background:rgba(58,217,142,.14);color:var(--green)}
 .verdict.leak{background:rgba(255,132,132,.14);color:var(--red)}
 .combo-more{width:100%;margin-top:6px;padding:11px;border-radius:10px;font-size:.78rem;font-weight:700;color:var(--gold-1);background:rgba(224,184,90,.08)}
@@ -186,7 +186,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .bd-range{display:flex;justify-content:flex-end;margin:14px 0 6px}
 .ctx{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 8px}
 .ctx div{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:9px 10px;min-width:0}
-.ctx small{display:block;font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+.ctx small{display:block;font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
 .ctx strong{display:block;font-size:.78rem;color:var(--gold-1);margin:3px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ctx em{font-style:normal;font-size:.7rem;font-variant-numeric:tabular-nums}
 .ctx-base{font-size:.72rem;color:var(--ink-faint);margin:0 0 14px}
@@ -264,7 +264,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .trade-row .meta{font-size:.72rem;color:var(--ink-faint);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .trade-row .note{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.74rem;color:var(--ink-dim);margin-top:5px;line-height:1.45;white-space:normal;word-break:break-word}
 .trade-row .tagrow{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
-.mini-tag{font-size:.6rem;font-weight:700;background:rgba(224,184,90,.14);color:var(--gold-1);border-radius:5px;padding:2px 7px;letter-spacing:.02em}
+.mini-tag{font-size:.68rem;font-weight:700;background:rgba(224,184,90,.14);color:var(--gold-1);border-radius:5px;padding:2px 7px;letter-spacing:.02em}
 .trade-row .pnl{font-weight:700;font-size:.95rem;text-align:right}
 .trade-row .pnl.pos{color:var(--green)}.trade-row .pnl.neg{color:var(--red)}.trade-row .pnl.be{color:var(--ink-dim)}
 .trade-row .pnl small{display:block;font-size:.65rem;color:var(--ink-faint);font-weight:500;margin-top:2px}
@@ -631,21 +631,7 @@ function openDaySheet(iso, opts){
     <h3>${relDay(iso)}</h3>
     <p class="desc">${trades.length} trade${trades.length===1?'':'s'} · Day PnL <b style="color:${dayPnl>0?'var(--green-deep)':dayPnl<0?'var(--red-deep)':'inherit'}">${money(dayPnl,true)}</b></p>
     <div style="max-height:46vh;overflow-y:auto">
-    ${trades.map(t=>{
-      const p = tradePnl(t); const kind = classify(t);
-      const cls = kind==='win'?'pos':kind==='loss'?'neg':'be';
-      return `<button class="trade-row" data-id="${t.id}" style="margin-bottom:8px">
-        <span class="ava">${esc(t.asset.slice(0,3))}</span>
-        <span class="mid">
-          <span class="sym">${esc(t.asset)}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
-          ${t.layers.length>1?`<span class="meta">${t.layers.length} entries</span>`:''}
-          ${t.tags&&t.tags.length?`<span class="tagrow">${t.tags.map(tg=>`<span class="mini-tag">${esc(tg)}</span>`).join('')}</span>`:''}
-          ${t.notes?`<span class="note">${esc(t.notes)}</span>`:''}
-        </span>
-        <span class="pnl ${cls}">${kind==='be'?'BE':money(p,true)}${kind==='be'?'<small>'+money(p,true)+'</small>':''}</span>
-        ${I.chevR}
-      </button>`;
-    }).join('')}
+    ${trades.map(t=> tradeRowHTML(t, t.layers.length>1 ? t.layers.length+' layers' : '')).join('')}
     </div>
   `, opts);
   sheetEl.querySelectorAll('.trade-row').forEach(r=> r.onclick = ()=>{
@@ -675,7 +661,7 @@ function renderStats(){
   const bes = mt.filter(t=>classify(t)==='be');
   const monthPnl = mt.reduce((s,t)=>s+tradePnl(t),0);
   const decided = wins.length + losses.length;
-  const winrate = decided ? (wins.length/decided*100) : null;
+  const winrate = mt.length ? (wins.length/mt.length*100) : null;
   const grossW = wins.reduce((s,t)=>s+tradePnl(t),0);
   const grossL = Math.abs(losses.reduce((s,t)=>s+tradePnl(t),0));
   const pf = grossL > 0 ? (grossW/grossL) : (grossW > 0 ? Infinity : null);
@@ -777,6 +763,22 @@ function renderStats(){
     </button>`;
   };
 
+  const assetCardHTML = assetRows.length > 1 ? `
+  <div class="card-navy">
+    <div class="card-title"><h3>By asset</h3><span class="sub">${MONTHS_S[m]} ${y}</span></div>
+    ${assetRows.length ? assetRows.map(([sym,b])=>{
+      const wr = b.n ? (b.w/b.n*100) : null;
+      return `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <span class="ava" style="width:34px;height:34px;font-size:.62rem">${esc(sym.slice(0,3))}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.86rem">${esc(sym)}</div>
+          <div style="font-size:.7rem;color:var(--ink-faint)">${b.n} trade${b.n===1?'':'s'}${wr===null?'':' · '+wr.toFixed(0)+'% won'}</div>
+        </div>
+        <div style="font-weight:700;font-size:.9rem;color:${b.pnl>0?'var(--green)':b.pnl<0?'var(--red)':'var(--ink-dim)'}">${money(b.pnl,true)}</div>
+      </div>`;
+    }).join('') : `<div class="empty-chart">No trades taken this month.</div>`}
+  </div>` : '';
+
   el.innerHTML = `
   <div class="hero">
     <div class="label-row">
@@ -794,10 +796,23 @@ function renderStats(){
       <span class="chip ${todayPnl>0?'pos':todayPnl<0?'neg':'neutral'}">${money(todayPnl,true)} · Today</span>
     </div>
     <div class="hero-actions">
-      <button data-act="go-add">${I.plus}<span>Add trade</span></button>
       <button data-act="deposit">${I.dl}<span>Deposit</span></button>
       <button data-act="withdraw">${I.ul}<span>Withdraw</span></button>
     </div>
+  </div>
+
+  <div class="card-navy" id="combo-card">
+    <div class="card-title"><h3>Combos</h3><span class="sub">All time</span></div>
+    ${combo.rows.length ? `
+      <p class="combo-cover"><b>${combo.withR}</b> of <b>${combo.total}</b> trades have R from your journal${combo.skipped ? ` · <b>${combo.skipped}</b> left out for missing or doubled tags` : ''}</p>
+      ${combo.needsFix.length ? `<button class="fix-banner" data-fix-list>
+        <span><b>${combo.needsFix.length} trade${combo.needsFix.length===1?'':'s'}</b> ${combo.needsFix.length===1?'has':'have'} journal numbers that don't add up, so ${combo.needsFix.length===1?'it is':'they are'} left out of R.</span>
+        <span class="fix-cta">Review ${I.chevR}</span>
+      </button>` : ''}
+      ${comboShown.map(comboRowHTML).join('')}
+      ${combo.rows.length > COMBO_SHOW ? `<button class="combo-more" data-combos-all>${UI.combosAll ? 'Show top '+COMBO_SHOW : 'Show all '+combo.rows.length+' combos'}</button>` : ''}
+      <p class="setup-note">Each combo is a level plus an entry; refined and unrefined trades count together. Sorted by estimated R per trade: a combo with few trades is pulled toward your overall average of ${fmtR(combo.avgR)}, so one lucky trade can't top the list. Edge and Leak only appear once a combo's result is clearly above or below 0R.</p>`
+      : `<div class="empty-chart">${combo.total ? 'Tag trades with one level and one entry to see combos.' : 'No trades logged on this account yet.'}</div>`}
   </div>
 
   <div class="month-row">
@@ -819,56 +834,26 @@ function renderStats(){
   </div>` : ''}
 
   <div class="stat-grid">
-    <div class="stat-cell"><div class="k">${I.wallet}Monthly PnL</div><div class="v ${monthPnl>0?'pos':monthPnl<0?'neg':''}">${money(monthPnl,true)}</div></div>
-    <div class="stat-cell"><div class="k">${I.target}Winrate</div><div class="v">${winrate===null?'—':winrate.toFixed(1)+'%'}</div></div>
-    <div class="stat-cell"><div class="k">${I.hash}Trades this month</div><div class="v">${mt.length}</div></div>
+    <div class="stat-cell"><div class="k">${I.target}Win rate</div><div class="v">${winrate===null?'—':winrate.toFixed(1)+'%'}</div></div>
     <div class="stat-cell"><div class="k">${I.scale}Profit factor</div><div class="v">${pf===null?'—':pf===Infinity?'∞':pf.toFixed(2)}</div></div>
   </div>
 
   <div class="card-navy">
-    <div class="card-title"><h3>Wins vs losses</h3><span class="sub">${MONTHS_S[m]} ${y}</span></div>
+    <div class="card-title"><h3>Wins vs losses</h3><span class="sub">${mt.length} trade${mt.length===1?'':'s'} · ${MONTHS_S[m]} ${y}</span></div>
     ${mt.length ? `
     <div class="wl-bar">
       <span style="width:${(wins.length/mt.length*100)}%;background:var(--green)"></span>
-      <span style="width:${(bes.length/mt.length*100)}%;background:var(--blue-soft)"></span>
       <span style="width:${(losses.length/mt.length*100)}%;background:var(--red)"></span>
+      <span style="width:${(bes.length/mt.length*100)}%;background:#6b6250"></span>
     </div>
     <div class="wl-legend">
       <span class="li"><span class="dot" style="background:var(--green)"></span><b>${wins.length}</b>&nbsp;Wins</span>
       <span class="li"><span class="dot" style="background:var(--red)"></span><b>${losses.length}</b>&nbsp;Losses</span>
-      <span class="li"><span class="dot" style="background:var(--blue-soft)"></span><b>${bes.length}</b>&nbsp;Breakeven</span>
+      <span class="li"><span class="dot" style="background:#6b6250"></span><b>${bes.length}</b>&nbsp;Breakeven</span>
     </div>` : `<div class="empty-chart">No trades taken this month.</div>`}
   </div>
 
-  <div class="card-navy">
-    <div class="card-title"><h3>By asset</h3><span class="sub">${MONTHS_S[m]} ${y}</span></div>
-    ${assetRows.length ? assetRows.map(([sym,b])=>{
-      const dec = b.w+b.l;
-      const wr = dec ? (b.w/dec*100) : null;
-      return `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)">
-        <span class="ava" style="width:34px;height:34px;font-size:.62rem">${esc(sym.slice(0,3))}</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:.86rem">${esc(sym)}</div>
-          <div style="font-size:.7rem;color:var(--ink-faint)">${b.n} trade${b.n===1?'':'s'}${wr===null?'':' · '+wr.toFixed(0)+'% winrate'}</div>
-        </div>
-        <div style="font-weight:700;font-size:.9rem;color:${b.pnl>0?'var(--green)':b.pnl<0?'var(--red)':'var(--ink-dim)'}">${money(b.pnl,true)}</div>
-      </div>`;
-    }).join('') : `<div class="empty-chart">No trades taken this month.</div>`}
-  </div>
-
-  <div class="card-navy" id="combo-card">
-    <div class="card-title"><h3>Combos</h3><span class="sub">All time</span></div>
-    ${combo.rows.length ? `
-      <p class="combo-cover"><b>${combo.withR}</b> of <b>${combo.total}</b> trades have R from your journal${combo.skipped ? ` · <b>${combo.skipped}</b> left out for missing or doubled tags` : ''}</p>
-      ${combo.needsFix.length ? `<button class="fix-banner" data-fix-list>
-        <span><b>${combo.needsFix.length} trade${combo.needsFix.length===1?'':'s'}</b> ${combo.needsFix.length===1?'has':'have'} journal numbers that don't add up, so ${combo.needsFix.length===1?'it is':'they are'} left out of R.</span>
-        <span class="fix-cta">Review ${I.chevR}</span>
-      </button>` : ''}
-      ${comboShown.map(comboRowHTML).join('')}
-      ${combo.rows.length > COMBO_SHOW ? `<button class="combo-more" data-combos-all>${UI.combosAll ? 'Show top '+COMBO_SHOW : 'Show all '+combo.rows.length+' combos'}</button>` : ''}
-      <p class="setup-note">Each combo is a level plus an entry; refined and unrefined trades count together. Sorted by estimated R per trade: a combo with few trades is pulled toward your overall average of ${fmtR(combo.avgR)}, so one lucky trade can't top the list. Edge and Leak only appear once a combo's result is clearly above or below 0R.</p>`
-      : `<div class="empty-chart">${combo.total ? 'Tag trades with one level and one entry to see combos.' : 'No trades logged on this account yet.'}</div>`}
-  </div>
+  ${assetCardHTML}
 
   <div class="card-navy" id="setup-card">
     <button class="card-toggle" data-bd-toggle aria-expanded="${!!UI.breakdownOpen}">
@@ -924,7 +909,6 @@ function renderStats(){
   };
   el.querySelector('#m-prev').onclick = () => { UI.statsM--; if(UI.statsM<0){UI.statsM=11;UI.statsY--;} renderStats(); };
   const nx = el.querySelector('#m-next'); if(nx) nx.onclick = () => { UI.statsM++; if(UI.statsM>11){UI.statsM=0;UI.statsY++;} renderStats(); };
-  el.querySelector('[data-act="go-add"]').onclick = () => nav('add');
   el.querySelector('[data-act="deposit"]').onclick = () => openTxnSheet(aid,'deposit');
   el.querySelector('[data-act="withdraw"]').onclick = () => openTxnSheet(aid,'withdraw');
 }
@@ -1153,16 +1137,26 @@ function setupMatch(t, group, key, none){
   const inGroup = (t.tags||[]).filter(tg=>tagGroup(tg)===group);
   return none ? inGroup.length===0 : inGroup.includes(key);
 }
+/* One line of the journal worth reading in a list: Lesson, else Before, else the first free-text line */
+function notePreview(t){
+  const n = t.notes || '';
+  const pick = key => { const v = lineOf(n, key); return v && v.trim() ? v.trim() : null; };
+  const l = pick('(?:Lesson|L)'); if(l) return 'Lesson: '+l;
+  const bf = pick('(?:Before|Pre)'); if(bf) return bf;
+  const free = n.split('\n').map(x=>x.trim()).find(x=> x && !/^(Plan|P|Before|Pre|During|Result|E|After|Post|Lesson|L)\s*:/i.test(x));
+  return free || '';
+}
 function tradeRowHTML(t, meta){
   const p = tradePnl(t); const kind = classify(t);
   const cls = kind==='win'?'pos':kind==='loss'?'neg':'be';
+  const multiAsset = S.assets.length>1 || S.trades.some(x=>x.asset!==t.asset);
   return `<button class="trade-row" data-id="${t.id}">
-    <span class="ava">${esc(t.asset.slice(0,3))}</span>
+    ${multiAsset?`<span class="ava">${esc(t.asset.slice(0,3))}</span>`:''}
     <span class="mid">
-      <span class="sym">${esc(t.asset)}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
+      <span class="sym">${multiAsset?esc(t.asset):''}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
       ${meta?`<span class="meta">${meta}</span>`:''}
       ${t.tags&&t.tags.length?`<span class="tagrow">${t.tags.map(tg=>`<span class="mini-tag">${esc(tg)}</span>`).join('')}</span>`:''}
-      ${t.notes?`<span class="note">${esc(t.notes)}</span>`:''}
+      ${notePreview(t)?`<span class="note">${esc(notePreview(t))}</span>`:''}
     </span>
     <span class="pnl ${cls}">${kind==='be'?'BE':money(p,true)}${kind==='be'?'<small>'+money(p,true)+'</small>':''}</span>
     ${I.chevR}
@@ -1197,18 +1191,16 @@ function openSetupSheet(sel, opts){
 function tagPickerHTML(f){
   const chip = tg => `<button class="select-chip ${f.tags.includes(tg)?'on':''}" data-tag="${esc(tg)}">${esc(tg)}</button>`;
   const hint = h => `<span style="text-transform:none;font-weight:500;color:var(--ink-faint)">· ${h}</span>`;
-  let h = TAG_GROUPS.map(g=>`
+  let h = TAG_GROUPS.filter(g=> S.tags.some(tg=>tagGroup(tg)===g.key)).map(g=>`
   <div class="section-label">${g.label} ${hint(g.hint)}</div>
   <div class="chips tag-group" data-group="${g.key}">
     ${S.tags.filter(tg=>tagGroup(tg)===g.key).map(chip).join('')}
-    <button class="select-chip ghost" data-new-tag="${g.key}">${I.plus}New</button>
   </div>`).join('');
   const other = S.tags.filter(tg=>tagGroup(tg)==='other');
   if(other.length) h += `
   <div class="section-label">Other tags ${hint('any')}</div>
   <div class="chips tag-group" data-group="other">
     ${other.map(chip).join('')}
-    <button class="select-chip ghost" data-new-tag="other">${I.plus}New</button>
   </div>`;
   return h;
 }
@@ -1246,16 +1238,15 @@ function renderAdd(){
   <h2 style="font-size:1.3rem;margin:4px 2px 6px">${editing?'Edit trade':'Add trade'}</h2>
   <p style="font-size:.82rem;color:var(--ink-dark-dim);margin:0 2px">${editing?'Update the details below.':'Log it while the details are fresh.'}</p>
 
-  <div class="section-label">Account</div>
+  ${S.accounts.length>1 ? `<div class="section-label">Account</div>
   <div class="chips" id="f-accounts">
     ${S.accounts.map(a=>`<button class="select-chip ${a.id===f.accountId?'on':''}" data-id="${a.id}">${esc(a.name)}</button>`).join('')}
-  </div>
+  </div>` : ''}
 
-  <div class="section-label">Asset</div>
+  ${S.assets.length>1 ? `<div class="section-label">Asset</div>
   <div class="chips" id="f-assets">
     ${S.assets.map(s=>`<button class="select-chip ${s===f.asset?'on':''}" data-sym="${esc(s)}">${esc(s)}</button>`).join('')}
-    <button class="select-chip ghost" id="f-new-asset">${I.plus}New</button>
-  </div>
+  </div>` : ''}
 
   <div class="section-label">Direction</div>
   <div class="seg">
@@ -1264,6 +1255,13 @@ function renderAdd(){
   </div>
 
   ${tagPickerHTML(f)}
+
+  <div class="section-label">Journal</div>
+  <div class="chips" id="f-note-tools">
+    <button class="select-chip ghost" id="f-tpl">${I.plus}Template</button>
+    <button class="select-chip ghost" id="f-legend">${I.note}Legend</button>
+  </div>
+  <div class="field">${I.note}<textarea id="f-notes" placeholder="Plan: 4289 SL30 TP60 — tap Template to start">${esc(f.notes)}</textarea></div>
 
   <div class="section-label">PnL calculator</div>
   <div class="calc">
@@ -1281,22 +1279,12 @@ function renderAdd(){
   <div class="section-label">Date</div>
   <div class="field">${I.cal}<input type="date" id="f-date" value="${f.date}" max="${todayISO()}"></div>
 
-  <div class="section-label">Journal</div>
-  <div class="chips" id="f-note-tools">
-    <button class="select-chip ghost" id="f-tpl">${I.plus}Template</button>
-    <button class="select-chip ghost" id="f-legend">${I.note}Legend</button>
-  </div>
-  <div class="field">${I.note}<textarea id="f-notes" placeholder="Plan: 4289 SL30 TP60 — tap Template to start">${esc(f.notes)}</textarea></div>
-
   <button class="btn-primary" id="f-save">${I.check}${editing?'Save changes':'Save trade'}</button>
   ${editing?`<button class="btn-danger-ghost" id="f-delete">${I.trash}Delete trade</button>`:''}`;
 
   /* wire */
-  el.querySelector('#f-accounts').onclick = e => { const b=e.target.closest('[data-id]'); if(b){ f.accountId=b.dataset.id; renderAdd(); } };
-  el.querySelector('#f-assets').onclick = e => {
-    const b=e.target.closest('[data-sym]'); if(b){ f.asset=b.dataset.sym; renderAdd(); return; }
-    if(e.target.closest('#f-new-asset')) openAssetSheet(sym => { f.asset=sym; renderAdd(); });
-  };
+  const fa = el.querySelector('#f-accounts'); if(fa) fa.onclick = e => { const b=e.target.closest('[data-id]'); if(b){ f.accountId=b.dataset.id; renderAdd(); } };
+  const fs = el.querySelector('#f-assets'); if(fs) fs.onclick = e => { const b=e.target.closest('[data-sym]'); if(b){ f.asset=b.dataset.sym; renderAdd(); } };
   el.querySelectorAll('[data-dir]').forEach(b=> b.onclick = ()=>{ f.direction=b.dataset.dir; renderAdd(); });
 
   el.querySelectorAll('.tag-group').forEach(row=> row.onclick = e => {
@@ -1421,21 +1409,9 @@ function renderHistory(){
         const dayPnl = dayTrades.reduce((s,x)=>s+tradePnl(x),0);
         listHtml += `<div class="day-head"><span>${relDay(curDay)}</span><span class="dp" style="color:${dayPnl>0?'var(--green-deep)':dayPnl<0?'var(--red-deep)':'inherit'}">${money(dayPnl,true)}</span></div>`;
       }
-      const p = tradePnl(t); const a = acct(t.accountId);
-      const kind = classify(t);
-      const cls = kind==='win'?'pos':kind==='loss'?'neg':'be';
-      listHtml += `
-      <button class="trade-row" data-id="${t.id}">
-        <span class="ava">${esc(t.asset.slice(0,3))}</span>
-        <span class="mid">
-          <span class="sym">${esc(t.asset)}<span class="dir-badge ${t.direction}">${t.direction.toUpperCase()}</span></span>
-          <span class="meta">${esc(a?a.name:'Deleted account')}${t.layers.length>1?' · '+t.layers.length+' layers':''}</span>
-          ${t.tags&&t.tags.length?`<span class="tagrow">${t.tags.map(tg=>`<span class="mini-tag">${esc(tg)}</span>`).join('')}</span>`:''}
-          ${t.notes?`<span class="note">${esc(t.notes)}</span>`:''}
-        </span>
-        <span class="pnl ${cls}">${kind==='be'?'BE':money(p,true)}${kind==='be'?'<small>'+money(p,true)+'</small>':''}</span>
-        ${I.chevR}
-      </button>`;
+      const a = acct(t.accountId);
+      const meta = [S.accounts.length>1 ? esc(a?a.name:'Deleted account') : '', t.layers.length>1 ? t.layers.length+' layers' : ''].filter(Boolean).join(' · ');
+      listHtml += tradeRowHTML(t, meta);
     }
   }
 
@@ -1446,7 +1422,7 @@ function renderHistory(){
     ${S.accounts.map(a=>`<button class="select-chip ${fid===a.id?'on':''}" data-f="${a.id}">${esc(a.name)}</button>`).join('')}
   </div>`:''}
   ${S.tags.length?`<div class="filter-scroll" style="margin-top:6px">
-    <button class="select-chip ${ftag==='all'?'on':''}" data-t="all">All setups</button>
+    <button class="select-chip ${ftag==='all'?'on':''}" data-t="all">All tags</button>
     ${S.tags.map(tg=>`<button class="select-chip ${ftag===tg?'on':''}" data-t="${esc(tg)}">${esc(tg)}</button>`).join('')}
   </div>`:''}
   ${listHtml}
@@ -1506,7 +1482,7 @@ function renderSettings(){
   </div>
 
   <div class="card-glass">
-    <div class="card-title"><h3>Setup tags</h3></div>
+    <div class="card-title"><h3>Tags</h3></div>
     <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:4px">Each group is a row on Add Trade, and a trade takes one tag per group. Tap a tag to move it to a different group.</p>
     ${S.settings.tagGroupsToReview ? `<div style="background:rgba(224,184,90,.1);border:1px solid var(--gold-line);border-radius:10px;padding:12px;margin:12px 0 4px">
       <p style="font-size:.8rem;color:var(--ink);line-height:1.45;margin-bottom:10px">Your tags were sorted into groups by name. Check each one is in the right group.</p>
@@ -1527,20 +1503,8 @@ function renderSettings(){
   </div>
 
   <div class="card-glass">
-    <div class="card-title"><h3>Journal format</h3></div>
-    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Plan, Result and After are read by the weekly report, so keep those lines in this shape. Before, During and Lesson are your own words.</p>
-    <pre style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;font-size:.74rem;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:var(--ink-dark)">Plan: 4289 SL30 TP60
-Before: 4H engulf + 15m engulf, bought the retrace
-During: ranging, 5m bottom wicks, DXY at resistance
-Result: Best+27 Worst-20 out4289 BE@20
-After: SL, kept dropping after BE hit
-Lesson: </pre>
-    <button class="btn-soft" id="s-legend" style="width:100%;margin-top:12px">${I.note}What each line means</button>
-  </div>
-
-  <div class="card-glass">
     <div class="card-title"><h3>Preferences</h3></div>
-    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Breakeven threshold — trades with net PnL between <b>−$<span id="be-echo">${(S.settings.beThreshold||0)}</span></b> and <b>+$<span id="be-echo2">${(S.settings.beThreshold||0)}</span></b> count as breakeven and are excluded from your winrate.</p>
+    <p style="font-size:.78rem;color:var(--ink-dark-dim);margin-bottom:12px">Breakeven threshold — trades with net PnL between <b>−$<span id="be-echo">${(S.settings.beThreshold||0)}</span></b> and <b>+$<span id="be-echo2">${(S.settings.beThreshold||0)}</span></b> count as breakeven. Win rate is wins out of all trades, so a breakeven counts against it.</p>
     <div class="field" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)">
       <span style="font-weight:700;color:var(--ink-dark-dim)">±$</span>
       <input id="s-be" type="text" inputmode="decimal" value="${S.settings.beThreshold||0}" aria-label="Breakeven threshold">
@@ -1623,7 +1587,6 @@ Lesson: </pre>
   el.querySelector('#s-export').onclick = exportData;
   el.querySelector('#s-export-week').onclick = exportWeekly;
   el.querySelector('#s-export-csv').onclick = exportCSV;
-  el.querySelector('#s-legend').onclick = openLegendSheet;
   el.querySelector('#s-import').onclick = ()=> document.getElementById('import-file').click();
   el.querySelector('#s-reset').onclick = ()=> confirmSheet('Erase all data?','Every account, trade, and note will be permanently deleted from this device.',()=>{
     localStorage.removeItem(LS_KEY); S = load(); UI = {tab:'calendar',statsAccountId:null,statsY:now.getFullYear(),statsM:now.getMonth(),historyFilter:'all', historyTag:'all', form:null};
@@ -1996,7 +1959,7 @@ function statBlock(list){
   const wins = p.filter(x=>x>thr), losses = p.filter(x=>x<-thr), bes = p.filter(x=>x>=-thr&&x<=thr);
   return {
     trades: list.length, wins: wins.length, losses: losses.length, breakevens: bes.length,
-    winRatePct: (wins.length+losses.length) ? r2(wins.length/(wins.length+losses.length)*100) : null,
+    winRatePct: list.length ? r2(wins.length/list.length*100) : null,
     netPnl: r2(sum(p)),
     avgWin: wins.length ? r2(sum(wins)/wins.length) : null,
     avgLoss: losses.length ? r2(sum(losses)/losses.length) : null,
