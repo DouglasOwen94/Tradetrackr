@@ -2058,6 +2058,10 @@ function exportWeekly(){
     thisWeekByCombo: groupBlock(week, comboKey),
     allTimeByCombo: groupBlock(S.trades, comboKey),
     allTimeByComboRefine: groupBlock(S.trades, comboRefineKey),
+    /* Same ranking as the Stats screen, so the AI reads it instead of recalculating */
+    allTimeComboRanking: (cs => ({ overallAvgR: r2(cs.avgR), tradesWithR: cs.withR, pullTrades: COMBO_K, edgeLeakZ: COMBO_Z, minTradesForVerdict: COMBO_MIN,
+      combos: cs.rows.map((c,i)=>({ rank: i+1, combo: c.id, trades: c.n, tradesWithR: c.nR, ownAvgR: c.rawR===null ? null : r2(c.rawR),
+        estimatedR: c.adjR===null ? null : r2(c.adjR), verdict: c.verdict==='edge' ? 'Edge' : c.verdict==='leak' ? 'Leak' : null })) }))(comboStats(S.trades)),
     thisWeekByDirection: groupBlock(week, t=>[t.direction]),
     allTimeByDirection: groupBlock(S.trades, t=>[t.direction]),
     trades: week.map(t=>({
